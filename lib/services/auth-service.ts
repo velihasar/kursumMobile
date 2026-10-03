@@ -33,8 +33,28 @@ export interface AuthResponse {
   };
 }
 
+export function normalizeContact(input: string): string {
+  if (!input) return '';
+  const trimmed = input.trim();
+  if (trimmed.includes('@')) {
+    return trimmed.toLowerCase();
+  }
+  let digits = trimmed.replace(/\D/g, '');
+  if (digits.startsWith('90') && digits.length === 12) {
+    digits = digits.substring(2);
+  }
+  if (digits.length === 10 && digits.startsWith('5')) {
+    digits = '0' + digits;
+  }
+  return digits || trimmed;
+}
+
 export async function loginApi(dto: LoginDto): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/api/v1/auth/login', dto);
+  const normalizedDto: LoginDto = {
+    ...dto,
+    email: normalizeContact(dto.email),
+  };
+  const res = await apiClient.post<AuthResponse>('/api/v1/auth/login', normalizedDto);
   return res.data;
 }
 
@@ -44,7 +64,11 @@ export async function registerApi(dto: RegisterDto): Promise<any> {
 }
 
 export async function registerParentApi(dto: RegisterParentDto): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/api/v1/auth/register-parent', dto);
+  const normalizedDto: RegisterParentDto = {
+    ...dto,
+    emailOrPhone: normalizeContact(dto.emailOrPhone),
+  };
+  const res = await apiClient.post<AuthResponse>('/api/v1/auth/register-parent', normalizedDto);
   return res.data;
 }
 
