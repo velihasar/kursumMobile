@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { showAlert } from '@/components/ui/CustomAlert';
-import { getActiveApiBaseUrl } from '@/lib/server-url-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfilScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { palette, isDark, toggleTheme } = useAppTheme();
-  const [serverUrl, setServerUrl] = useState('');
-
-  useEffect(() => {
-    getActiveApiBaseUrl().then(setServerUrl);
-  }, []);
 
   const handleLogout = () => {
     showAlert(
@@ -40,7 +40,10 @@ export default function ProfilScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: palette.background }}
+      contentContainerStyle={styles.content}
+    >
       <Text style={[styles.title, { color: palette.text }]}>Profil & Ayarlar</Text>
 
       {/* User Info Card */}
@@ -50,9 +53,23 @@ export default function ProfilScreen() {
             <Ionicons name="person" size={32} color={palette.primary} />
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={[styles.userName, { color: palette.text }]}>{user?.fullName || 'Öğrenci'}</Text>
-            <Text style={[styles.userEmail, { color: palette.textSecondary }]}>{user?.email || 'ogrenci@kursum.com'}</Text>
-            <Text style={[styles.userRole, { color: palette.primary }]}>Rol: {user?.roles?.join(', ') || 'Öğrenci'}</Text>
+            <Text style={[styles.userName, { color: palette.text }]}>
+              {user?.fullName || 'Kullanıcı'}
+            </Text>
+            {user?.email ? (
+              <Text style={[styles.userEmail, { color: palette.textSecondary }]}>
+                {user.email}
+              </Text>
+            ) : null}
+            <Text style={[styles.userRole, { color: palette.primary }]}>
+              {user?.role === 'Parent'
+                ? 'Veli Hesabı'
+                : user?.role === 'Teacher'
+                ? 'Öğretmen Hesabı'
+                : user?.role === 'Admin'
+                ? 'Yönetici'
+                : 'Öğrenci Hesabı'}
+            </Text>
           </View>
         </View>
       </Card>
@@ -65,31 +82,34 @@ export default function ProfilScreen() {
             <Ionicons name="moon-outline" size={22} color={palette.text} />
             <Text style={[styles.settingLabel, { color: palette.text }]}>Karanlık Mod</Text>
           </View>
-          <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: palette.border, true: palette.primary }} />
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: palette.border, true: palette.primary }}
+          />
         </View>
       </Card>
 
-      {/* Backend / Network Settings */}
-      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 16 }]}>Sistem & Sunucu</Text>
+      {/* App Info Card */}
+      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 16 }]}>Uygulama Bilgisi</Text>
       <Card style={styles.settingsCard}>
-        <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => router.push('/(auth)/server-settings' as any)}
-        >
+        <View style={styles.settingRow}>
           <View style={styles.settingLeft}>
-            <Ionicons name="server-outline" size={22} color={palette.text} />
-            <View>
-              <Text style={[styles.settingLabel, { color: palette.text }]}>Backend Bağlantısı</Text>
-              <Text style={[styles.settingSub, { color: palette.textMuted }]}>{serverUrl || 'Otomatik'}</Text>
-            </View>
+            <Ionicons name="information-circle-outline" size={22} color={palette.textSecondary} />
+            <Text style={[styles.settingLabel, { color: palette.text }]}>Sürüm</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={palette.textMuted} />
-        </TouchableOpacity>
+          <Text style={[styles.settingSub, { color: palette.textMuted }]}>v1.0.0</Text>
+        </View>
       </Card>
 
       {/* Logout */}
-      <View style={{ marginTop: 24 }}>
-        <Button title="Çıkış Yap" variant="danger" onPress={handleLogout} icon={<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />} />
+      <View style={{ marginTop: 24, marginBottom: 16 }}>
+        <Button
+          title="Çıkış Yap"
+          variant="danger"
+          onPress={handleLogout}
+          icon={<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />}
+        />
       </View>
     </ScrollView>
   );
@@ -99,6 +119,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingTop: 50,
+    paddingBottom: 32,
   },
   title: {
     fontSize: 24,
@@ -107,7 +128,7 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     padding: 18,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   profileRow: {
     flexDirection: 'row',

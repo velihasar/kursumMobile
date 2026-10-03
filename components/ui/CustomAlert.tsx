@@ -142,7 +142,7 @@ export const CustomAlert = () => {
         return {
           icon: options.icon || 'sparkles-outline',
           iconColor: palette.primary,
-          badgeBg: isDark ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF',
+          badgeBg: isDark ? 'rgba(44, 152, 246, 0.15)' : '#E8F4FE',
           btnBg: palette.primary,
         };
     }

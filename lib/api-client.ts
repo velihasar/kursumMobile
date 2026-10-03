@@ -68,15 +68,24 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error?.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const requestUrl = originalRequest?.url || '';
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('auth/refresh-token')) {
+    const isAuthRoute =
+      requestUrl.includes('auth/login') ||
+      requestUrl.includes('auth/register') ||
+      requestUrl.includes('auth/refresh-token') ||
+      requestUrl.includes('auth/register-parent');
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
             return apiClient(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -100,12 +109,14 @@ apiClient.interceptors.response.use(
         await saveAuthTokens(newToken, newRefreshToken || refreshToken);
         processQueue(null, newToken);
 
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        }
         return apiClient(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         await clearAuth();
-        return Promise.reject(refreshErr);
+        return Promise.reject(error);
       } finally {
         isRefreshing = false;
       }

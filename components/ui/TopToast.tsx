@@ -78,7 +78,7 @@ export function TopToastProvider({ children }: { children: ReactNode }) {
         };
       default:
         return {
-          bg: '#4F46E5',
+          bg: '#2C98F6',
           icon: 'information-circle' as const,
         };
     }

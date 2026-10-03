@@ -35,8 +35,8 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   registerParent: async () => ({ success: false }),
-  logout: async () => {},
-  checkAuth: async () => {},
+  logout: async () => { },
+  checkAuth: async () => { },
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -128,6 +128,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
+  function formatAuthError(msg: any): string {
+    if (!msg || typeof msg !== 'string') return 'Kullanıcı adı veya şifre hatalı.';
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes('usernotfound') ||
+      lower.includes('user not found') ||
+      lower.includes('kullanıcı bulunamadı') ||
+      lower.includes('kullanici bulunamadi') ||
+      lower.includes('password') ||
+      lower.includes('şifre') ||
+      lower.includes('sifre') ||
+      lower.includes('unauthorized') ||
+      lower.includes('invalid') ||
+      lower.includes('credentials') ||
+      lower.includes('token') ||
+      lower.includes('401') ||
+      lower.includes('400')
+    ) {
+      return 'Kullanıcı adı veya şifre hatalı.';
+    }
+    return msg;
+  }
+
   const login = async (dto: LoginDto) => {
     try {
       const res = await loginApi(dto);
@@ -142,10 +165,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(decodedUser);
         return { success: true };
       }
-      return { success: false, message: res.message || 'Giriş başarısız' };
+      return { success: false, message: formatAuthError(res.message) };
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.response?.data || err.message || 'Sunucuya bağlanılamadı';
-      return { success: false, message: typeof msg === 'string' ? msg : 'Giriş yapılamadı' };
+      const serverMsg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === 'string' ? err.response?.data : null) ||
+        err.message;
+
+      return { success: false, message: formatAuthError(serverMsg) };
     }
   };
 

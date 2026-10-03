@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { formatTurkishDate } from './wallet-service';
 
 export interface AttendanceRecord {
   id: number;
@@ -6,6 +7,8 @@ export interface AttendanceRecord {
   courseName: string;
   status: 'Geldi' | 'Gelmedi' | 'İzinli' | 'Geç Kaldı';
   note?: string;
+  studentId?: number;
+  studentName?: string;
 }
 
 export async function fetchAttendances(studentId?: string | number): Promise<AttendanceRecord[]> {
@@ -14,22 +17,45 @@ export async function fetchAttendances(studentId?: string | number): Promise<Att
     const res = await apiClient.get(url);
     const list = res.data?.data || res.data || [];
     if (Array.isArray(list) && list.length > 0) {
-      return list.map((a: any) => ({
-        id: a.id,
-        date: a.date ? a.date.split('T')[0] : 'Bugün',
-        courseName: a.courseName || 'Ders',
-        status: a.status === 1 ? 'Geldi' : a.status === 2 ? 'Gelmedi' : a.status === 3 ? 'İzinli' : a.status === 4 ? 'Geç Kaldı' : 'Geldi',
-        note: a.note || '',
-      }));
+      return list.map((a: any) => {
+        let status: 'Geldi' | 'Gelmedi' | 'İzinli' | 'Geç Kaldı' = 'Geldi';
+
+        if (typeof a.status === 'number') {
+          if (a.status === 1) status = 'Geldi';
+          else if (a.status === 2) status = 'Gelmedi';
+          else if (a.status === 3) status = 'İzinli';
+          else if (a.status === 4) status = 'Geç Kaldı';
+        } else if (typeof a.isPresent === 'boolean') {
+          if (a.isPresent) {
+            status = 'Geldi';
+          } else {
+            const reasonLower = (a.reason || '').toLowerCase();
+            if (reasonLower.includes('izin') || reasonLower.includes('rapor')) {
+              status = 'İzinli';
+            } else if (reasonLower.includes('geç') || reasonLower.includes('gecik')) {
+              status = 'Geç Kaldı';
+            } else {
+              status = 'Gelmedi';
+            }
+          }
+        } else if (typeof a.status === 'string') {
+          status = a.status as any;
+        }
+
+        const rawDate = a.attendanceDate || a.date || '';
+        return {
+          id: a.id,
+          date: rawDate ? formatTurkishDate(rawDate) : 'Bugün',
+          courseName: a.courseName || 'Ders',
+          status,
+          note: a.reason || a.note || '',
+          studentId: a.studentId,
+          studentName: a.studentName,
+        };
+      });
     }
     return [];
   } catch {
-    return [
-      { id: 1, date: '2026-09-30', courseName: 'Matematik - YKS', status: 'Geldi', note: 'Zamanında katıldı' },
-      { id: 2, date: '2026-09-29', courseName: 'Fizik', status: 'Geldi', note: 'Ödev teslim edildi' },
-      { id: 3, date: '2026-09-27', courseName: 'Kimya', status: 'İzinli', note: 'Veli izin dilekçesi' },
-      { id: 4, date: '2026-09-25', courseName: 'Biyoloji', status: 'Geç Kaldı', note: '10 dk gecikme' },
-      { id: 5, date: '2026-09-23', courseName: 'Türkçe', status: 'Geldi' },
-    ];
+    return [];
   }
 }

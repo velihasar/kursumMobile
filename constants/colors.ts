@@ -1,9 +1,9 @@
 export const Colors = {
   light: {
-    primary: '#4F46E5', // Indigo
-    primaryDark: '#3730A3',
-    primaryLight: '#EEF2FF',
-    accent: '#06B6D4', // Cyan
+    primary: '#2C98F6',
+    primaryDark: '#1A7AD4',
+    primaryLight: '#E8F4FE',
+    accent: '#00B4D8',
     background: '#F8FAFC',
     card: '#FFFFFF',
     text: '#0F172A',
@@ -17,16 +17,16 @@ export const Colors = {
     warningBg: '#FFFBEB',
     danger: '#EF4444',
     dangerBg: '#FEF2F2',
-    info: '#3B82F6',
-    infoBg: '#EFF6FF',
+    info: '#2C98F6',
+    infoBg: '#E8F4FE',
     tabBar: '#FFFFFF',
     tabBarBorder: '#E2E8F0',
   },
   dark: {
-    primary: '#6366F1',
-    primaryDark: '#4F46E5',
-    primaryLight: '#1E1B4B',
-    accent: '#22D3EE',
+    primary: '#2C98F6',
+    primaryDark: '#1A7AD4',
+    primaryLight: '#0F2D4A',
+    accent: '#38BDF8',
     background: '#0F172A',
     card: '#1E293B',
     text: '#F8FAFC',
@@ -41,7 +41,7 @@ export const Colors = {
     danger: '#F87171',
     dangerBg: '#7F1D1D',
     info: '#60A5FA',
-    infoBg: '#1E3A8A',
+    infoBg: '#0F2D4A',
     tabBar: '#1E293B',
     tabBarBorder: '#334155',
   }

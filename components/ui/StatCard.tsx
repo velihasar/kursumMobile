@@ -35,13 +35,21 @@ export const StatCard: React.FC<StatCardProps> = ({
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: palette.textSecondary }]}>{title}</Text>
+        <Text style={[styles.title, { color: palette.textSecondary }]} numberOfLines={1}>
+          {title}
+        </Text>
         <View style={[styles.iconBox, { backgroundColor: activeColor + '15' }]}>
-          <Ionicons name={icon} size={20} color={activeColor} />
+          <Ionicons name={icon} size={16} color={activeColor} />
         </View>
       </View>
-      <Text style={[styles.value, { color: palette.text }]}>{value}</Text>
-      {subtitle && <Text style={[styles.subtitle, { color: palette.textMuted }]}>{subtitle}</Text>}
+      <Text style={[styles.value, { color: palette.text }]} numberOfLines={1}>
+        {value}
+      </Text>
+      {subtitle && (
+        <Text style={[styles.subtitle, { color: palette.textMuted }]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      )}
     </View>
   );
 };
@@ -49,34 +57,37 @@ export const StatCard: React.FC<StatCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    minWidth: 140,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   title: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 4,
   },
   iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
   value: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 10,
+    marginTop: 2,
   },
 });

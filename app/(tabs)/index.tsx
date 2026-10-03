@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
@@ -7,8 +7,10 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
-import { fetchWalletInfo, WalletInfo } from '@/lib/services/wallet-service';
+import { fetchWalletInfo, WalletInfo, formatTurkishDate } from '@/lib/services/wallet-service';
 import { fetchParentStudents, ChildStudent } from '@/lib/services/student-service';
+import { fetchInstitutionInfo, InstitutionInfo } from '@/lib/services/institution-service';
+import { QrScannerModal } from '@/components/ui/QrScannerModal';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function DashboardScreen() {
@@ -20,22 +22,29 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [students, setStudents] = useState<ChildStudent[]>([]);
+  const [institution, setInstitution] = useState<InstitutionInfo | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [activeQrStudentId, setActiveQrStudentId] = useState<number | undefined>();
 
   const loadData = async () => {
     const parentId = user?.parentId;
     const defaultStudentId = user?.studentId;
 
-    const [w, sList] = await Promise.all([
+    const [w, sList, inst] = await Promise.all([
       fetchWalletInfo(defaultStudentId),
       fetchParentStudents(parentId, defaultStudentId),
+      fetchInstitutionInfo(user?.tenantId),
     ]);
     setWallet(w);
     setStudents(sList);
+    setInstitution(inst);
+    setLogoError(false);
   };
 
   useEffect(() => {
     loadData();
-  }, [user?.studentId, user?.parentId]);
+  }, [user?.studentId, user?.parentId, user?.tenantId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -46,8 +55,9 @@ export default function DashboardScreen() {
   const isParent = user?.role === 'Parent' || (user?.roles?.some((r) => r.toLowerCase().includes('veli') || r.toLowerCase().includes('parent')));
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: palette.background }}
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: palette.background }}
       contentContainerStyle={[
         styles.content,
         {
@@ -57,17 +67,79 @@ export default function DashboardScreen() {
       ]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
     >
-      {/* Top Header with Kursum Logo */}
+      {/* Top Header with Dual Branding (Kursum Brand + Institution Badge) */}
       <View style={styles.topHeader}>
         <View style={styles.brandRow}>
           <View style={[styles.logoBadge, { backgroundColor: palette.primary }]}>
-            <Ionicons name="school" size={24} color="#FFFFFF" />
+            <Ionicons name="school" size={20} color="#FFFFFF" />
           </View>
-          <Text style={[styles.brandTitle, { color: palette.text, marginLeft: 12 }]}>KURSUM</Text>
+          <Text style={[styles.brandTitle, { color: palette.text }]}>KURSUM</Text>
         </View>
+
+        {institution?.name ? (
+          <View
+            style={[
+              styles.institutionBadge,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
+                borderColor: isDark ? '#334155' : '#DBEAFE',
+              },
+            ]}
+          >
+            {institution.logoUrl && !logoError ? (
+              <Image
+                source={{ uri: institution.logoUrl }}
+                style={styles.instMiniLogo}
+                resizeMode="contain"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <Ionicons name="business" size={14} color={palette.primary} />
+            )}
+            <Text
+              style={[styles.institutionBadgeText, { color: palette.primary }]}
+              numberOfLines={1}
+            >
+              {institution.name}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Shared Family Finance Card */}
+      {/* QR Attendance Quick Action Banner */}
+      <TouchableOpacity
+        style={[
+          styles.qrBannerCard,
+          {
+            backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+            borderColor: palette.primary,
+          },
+        ]}
+        activeOpacity={0.8}
+        onPress={() => {
+          setActiveQrStudentId(students[0]?.id);
+          setQrModalVisible(true);
+        }}
+      >
+        <View style={[styles.qrBannerIconBox, { backgroundColor: palette.primary }]}>
+          <Ionicons name="qr-code" size={24} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[styles.qrBannerTitle, { color: palette.text }]}>QR ile Yoklama Ver</Text>
+            <View style={[styles.qrLiveBadge, { backgroundColor: palette.primaryLight }]}>
+              <View style={[styles.qrLiveDot, { backgroundColor: palette.primary }]} />
+              <Text style={[styles.qrLiveText, { color: palette.primary }]}>HIZLI GİRİŞ</Text>
+            </View>
+          </View>
+          <Text style={[styles.qrBannerSub, { color: palette.textSecondary }]}>
+            Masadaki QR kodu taratarak derse anında giriş yapın
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={palette.textSecondary} />
+      </TouchableOpacity>
+
+      {/* Course Finance Card */}
       <Card style={[styles.sharedWalletCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <View style={styles.walletHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -75,7 +147,7 @@ export default function DashboardScreen() {
               <Ionicons name="wallet" size={20} color={palette.primary} />
             </View>
             <View>
-              <Text style={[styles.walletCardTitle, { color: palette.text }]}>Ortak Aile Cüzdanı</Text>
+              <Text style={[styles.walletCardTitle, { color: palette.text }]}>Kurs Cüzdanım</Text>
               <Text style={[styles.walletCardSub, { color: palette.textSecondary }]}>
                 {students.length > 1 ? `${students.length} Öğrenci İçin Geçerli` : 'Kullanılabilir Bakiye & Aidat'}
               </Text>
@@ -108,7 +180,7 @@ export default function DashboardScreen() {
               {wallet?.nextPaymentAmount ? `₺${wallet.nextPaymentAmount.toFixed(2)}` : '₺0.00'}
             </Text>
             <Text style={[styles.walletDueDate, { color: palette.textMuted }]}>
-              {wallet?.nextPaymentDate || 'Ödeme Yok'}
+              {wallet?.nextPaymentDate ? formatTurkishDate(wallet.nextPaymentDate) : 'Ödeme Yok'}
             </Text>
           </View>
         </View>
@@ -144,9 +216,6 @@ export default function DashboardScreen() {
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={[styles.childName, { color: palette.text }]}>{st.fullName}</Text>
-                <Text style={[styles.childGrade, { color: palette.textSecondary }]}>
-                  {st.branchName ? st.branchName : (st.schoolNumber ? `No: ${st.schoolNumber}` : 'Öğrenci')}
-                </Text>
               </View>
               <Badge label={`%${st.attendanceRate ?? 100} Katılım`} variant={st.attendanceRate && st.attendanceRate < 85 ? 'warning' : 'success'} />
             </View>
@@ -185,19 +254,30 @@ export default function DashboardScreen() {
             {/* Action Quick Links for this Child */}
             <View style={styles.childActionsRow}>
               <TouchableOpacity
+                style={[styles.childActionBtn, { borderColor: palette.primary, backgroundColor: palette.primaryLight }]}
+                onPress={() => {
+                  setActiveQrStudentId(st.id);
+                  setQrModalVisible(true);
+                }}
+              >
+                <Ionicons name="qr-code" size={15} color={palette.primary} />
+                <Text style={[styles.childActionText, { color: palette.primary }]}>QR Giriş</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.childActionBtn, { borderColor: palette.border }]}
                 onPress={() => router.push('/(tabs)/dersler')}
               >
-                <Ionicons name="calendar-outline" size={16} color={palette.primary} />
-                <Text style={[styles.childActionText, { color: palette.text }]}>Ders Programı ({st.courseCount ?? 0})</Text>
+                <Ionicons name="calendar-outline" size={15} color={palette.textSecondary} />
+                <Text style={[styles.childActionText, { color: palette.text }]}>Program ({st.courseCount ?? 0})</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.childActionBtn, { borderColor: palette.border }]}
                 onPress={() => router.push('/(tabs)/yoklama')}
               >
-                <Ionicons name="checkmark-done-circle-outline" size={16} color={palette.success} />
-                <Text style={[styles.childActionText, { color: palette.text }]}>Yoklama Raporu</Text>
+                <Ionicons name="checkmark-done-circle-outline" size={15} color={palette.success} />
+                <Text style={[styles.childActionText, { color: palette.text }]}>Yoklama</Text>
               </TouchableOpacity>
             </View>
           </Card>
@@ -253,6 +333,16 @@ export default function DashboardScreen() {
         </View>
       </Card>
     </ScrollView>
+
+    {/* QR Attendance Scanner Modal */}
+    <QrScannerModal
+      visible={qrModalVisible}
+      onClose={() => setQrModalVisible(false)}
+      students={students}
+      initialStudentId={activeQrStudentId}
+      onSuccess={loadData}
+    />
+    </>
   );
 }
 
@@ -261,7 +351,56 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
   },
+  qrBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginBottom: 16,
+    shadowColor: '#2C98F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  qrBannerIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrBannerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  qrLiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 4,
+  },
+  qrLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  qrLiveText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  qrBannerSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
   },
   brandRow: {
@@ -269,26 +408,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#2C98F6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   brandTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '900',
     letterSpacing: 0.5,
+    marginLeft: 8,
   },
-  brandSub: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '500',
+  institutionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    maxWidth: '52%',
+    gap: 6,
+  },
+  instMiniLogo: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+  },
+  institutionBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
   },
   sharedWalletCard: {
     padding: 16,
@@ -385,7 +540,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: 'rgba(44, 152, 246, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
