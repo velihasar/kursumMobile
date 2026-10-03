@@ -15,6 +15,13 @@ export interface RegisterDto {
   citizenId?: string;
 }
 
+export interface RegisterParentDto {
+  accessCode: string;
+  emailOrPhone: string;
+  password: string;
+  fullName?: string;
+}
+
 export interface AuthResponse {
   success: boolean;
   message: string;
@@ -33,6 +40,11 @@ export async function loginApi(dto: LoginDto): Promise<AuthResponse> {
 
 export async function registerApi(dto: RegisterDto): Promise<any> {
   const res = await apiClient.post('/api/v1/auth/register', dto);
+  return res.data;
+}
+
+export async function registerParentApi(dto: RegisterParentDto): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>('/api/v1/auth/register-parent', dto);
   return res.data;
 }
 

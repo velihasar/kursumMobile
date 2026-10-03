@@ -23,8 +23,8 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const { palette } = useAppTheme();
 
-  const [email, setEmail] = useState('admin@adminmail.com');
-  const [password, setPassword] = useState('Q1w212*_*');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [serverStatus, setServerStatus] = useState<{ ok: boolean; url: string; timeMs?: number } | null>(null);
 
@@ -39,7 +39,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Uyarı', 'Lütfen e-posta ve şifrenizi giriniz.');
+      Alert.alert('Uyarı', 'Lütfen e-posta / telefon numaranızı ve şifrenizi giriniz.');
       return;
     }
 
@@ -50,7 +50,7 @@ export default function LoginScreen() {
     if (res.success) {
       router.replace('/(tabs)');
     } else {
-      Alert.alert('Giriş Başarısız', res.message || 'E-posta veya şifre hatalı.');
+      Alert.alert('Giriş Başarısız', res.message || 'E-posta/telefon veya şifre hatalı.');
     }
   };
 
@@ -72,7 +72,7 @@ export default function LoginScreen() {
           </View>
           <Text style={[styles.title, { color: palette.text }]}>Kursum Mobile</Text>
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            Öğrenci & Veli Bilgi Sistemi
+            Veli, Öğretmen & Kurum Bilgi Sistemi
           </Text>
         </View>
 
@@ -112,11 +112,12 @@ export default function LoginScreen() {
           <Text style={[styles.cardTitle, { color: palette.text }]}>Giriş Yap</Text>
 
           <Input
-            label="E-Posta / TC Kimlik No"
-            placeholder="ornek@kursum.com"
+            label="E-Posta veya Telefon Numarası"
+            placeholder="ornek@mail.com veya 05XX XXX XX XX"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            autoCapitalize="none"
             icon="mail-outline"
           />
 
@@ -141,7 +142,7 @@ export default function LoginScreen() {
             onPress={handleDemoLogin}
           >
             <Text style={[styles.demoText, { color: palette.primary }]}>
-              Demo Bilgileri Doldur
+              Demo Yönetici ile Doldur
             </Text>
           </TouchableOpacity>
         </Card>
@@ -150,8 +151,8 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <TouchableOpacity onPress={() => router.push('/(auth)/register' as any)}>
             <Text style={[styles.footerText, { color: palette.textSecondary }]}>
-              Hesabınız yok mu?{' '}
-              <Text style={{ color: palette.primary, fontWeight: '700' }}>Kayıt Ol</Text>
+              İlk kez mi giriş yapıyorsunuz?{' '}
+              <Text style={{ color: palette.primary, fontWeight: '700' }}>Veli Giriş Kodu ile Aktif Et</Text>
             </Text>
           </TouchableOpacity>
         </View>
