@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
@@ -20,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const { palette } = useAppTheme();
 
@@ -64,7 +66,16 @@ export default function LoginScreen() {
       style={{ flex: 1, backgroundColor: palette.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top + 20, 32),
+            paddingBottom: Math.max(insets.bottom + 48, 64),
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Top Header */}
         <View style={styles.header}>
           <View style={[styles.iconWrapper, { backgroundColor: palette.primaryLight }]}>

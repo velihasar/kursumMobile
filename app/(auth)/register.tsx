@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { registerParent } = useAuth();
   const { palette } = useAppTheme();
 
@@ -108,7 +110,13 @@ export default function RegisterScreen() {
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 10, 24),
+            paddingBottom: Math.max(insets.bottom + 48, 64),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>

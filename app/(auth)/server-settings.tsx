@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ServerSettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { palette } = useAppTheme();
 
   const [activeUrl, setActiveUrl] = useState('');
@@ -51,7 +53,16 @@ export default function ServerSettingsScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: palette.background }}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: Math.max(insets.top + 16, 32),
+          paddingBottom: Math.max(insets.bottom + 48, 64),
+        },
+      ]}
+    >
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={palette.text} />
       </TouchableOpacity>
