@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Switch,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/auth-context';
@@ -12,11 +13,12 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { showAlert } from '@/components/ui/CustomAlert';
+import { showToast } from '@/components/ui/TopToast';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfilScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const { palette, isDark, toggleTheme } = useAppTheme();
 
   const handleLogout = () => {
@@ -36,6 +38,31 @@ export default function ProfilScreen() {
       ],
       'warning',
       'log-out-outline'
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    showAlert(
+      'Hesabımı Sil',
+      'Mobil kullanıcı hesabınızı silmek istediğinize emin misiniz?\n\nBu işlem sonucunda giriş bilgileriniz, oturumunuz ve bildirim ayarlarınız kalıcı olarak silinecektir. Kurumdaki veli kaydınız ve öğrencinizin kayıtları ise kurum arşivinde korunacaktır.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Hesabımı Kalıcı Olarak Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const res = await deleteAccount();
+            if (res.success) {
+              showToast('Hesap Silindi', res.message || 'Hesabınız başarıyla silindi.', 'success');
+              router.replace('/(auth)/login');
+            } else {
+              showAlert('İşlem Başarısız', res.message || 'Hesap silinirken bir hata oluştu.', undefined, 'error');
+            }
+          },
+        },
+      ],
+      'error',
+      'trash-outline'
     );
   };
 
@@ -102,14 +129,29 @@ export default function ProfilScreen() {
         </View>
       </Card>
 
-      {/* Logout */}
-      <View style={{ marginTop: 24, marginBottom: 16 }}>
+      {/* Account Actions */}
+      <View style={{ marginTop: 28, gap: 12, marginBottom: 24 }}>
         <Button
           title="Çıkış Yap"
-          variant="danger"
+          variant="outline"
           onPress={handleLogout}
-          icon={<Ionicons name="log-out-outline" size={20} color="#FFFFFF" />}
+          icon={<Ionicons name="log-out-outline" size={20} color={palette.text} />}
         />
+
+        <TouchableOpacity
+          style={[
+            styles.deleteAccountBtn,
+            {
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#FEE2E2',
+            },
+          ]}
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Text style={styles.deleteAccountText}>Hesabımı Sil</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -181,5 +223,19 @@ const styles = StyleSheet.create({
   settingSub: {
     fontSize: 12,
     marginTop: 2,
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  deleteAccountText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getAccessToken, getRefreshToken, getUserData, saveAuthTokens, saveUserData, clearAuth } from '@/lib/auth-storage';
-import { loginApi, registerApi, registerParentApi, LoginDto, RegisterDto, RegisterParentDto } from '@/lib/services/auth-service';
+import { loginApi, registerApi, registerParentApi, deleteAccountApi, LoginDto, RegisterDto, RegisterParentDto } from '@/lib/services/auth-service';
 import { jwtDecode } from 'jwt-decode';
 
 export interface UserSession {
@@ -23,6 +23,7 @@ interface AuthContextType {
   login: (dto: LoginDto) => Promise<{ success: boolean; message?: string }>;
   register: (dto: RegisterDto) => Promise<{ success: boolean; message?: string }>;
   registerParent: (dto: RegisterParentDto) => Promise<{ success: boolean; message?: string }>;
+  deleteAccount: () => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   registerParent: async () => ({ success: false }),
+  deleteAccount: async () => ({ success: false }),
   logout: async () => { },
   checkAuth: async () => { },
 });
@@ -210,6 +212,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const deleteAccount = async (): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await deleteAccountApi();
+      if (res.success) {
+        await clearAuth();
+        setToken(null);
+        setUser(null);
+        return { success: true, message: res.message };
+      }
+      return { success: false, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Hesap silme işlemi gerçekleştirilemedi.' };
+    }
+  };
+
   const logout = async () => {
     await clearAuth();
     setToken(null);
@@ -226,6 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         registerParent,
+        deleteAccount,
         logout,
         checkAuth,
       }}

@@ -72,18 +72,22 @@ export async function registerParentApi(dto: RegisterParentDto): Promise<AuthRes
   return res.data;
 }
 
-export async function checkServerPing(): Promise<{ ok: boolean; url: string; timeMs: number; message?: string }> {
-  const url = await getActiveApiBaseUrl();
-  const start = Date.now();
+export async function deleteAccountApi(): Promise<{ success: boolean; message: string }> {
   try {
-    const res = await axios.get(`${url}/swagger/index.html`, { timeout: 4000 });
-    return { ok: res.status >= 200 && res.status < 400, url, timeMs: Date.now() - start };
-  } catch (err: any) {
-    try {
-      const res2 = await axios.get(`${url}/`, { timeout: 4000 });
-      return { ok: res2.status < 500, url, timeMs: Date.now() - start };
-    } catch {
-      return { ok: false, url, timeMs: Date.now() - start, message: err?.message || 'Bağlantı hatası' };
-    }
+    const res = await apiClient.post('/api/v1/auth/delete-account');
+    return {
+      success: true,
+      message: res.data?.message || (typeof res.data === 'string' ? res.data : 'Hesabınız başarıyla silindi.'),
+    };
+  } catch (error: any) {
+    const msg =
+      error?.response?.data?.message ||
+      (typeof error?.response?.data === 'string' ? error?.response?.data : error?.message) ||
+      'Hesap silme işlemi gerçekleştirilemedi.';
+    return {
+      success: false,
+      message: msg,
+    };
   }
 }
+
