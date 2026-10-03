@@ -8,10 +8,21 @@ export interface AttendanceRecord {
   note?: string;
 }
 
-export async function fetchAttendances(): Promise<AttendanceRecord[]> {
+export async function fetchAttendances(studentId?: string | number): Promise<AttendanceRecord[]> {
   try {
-    const res = await apiClient.get('/api/v1/attendances/getall');
-    return res.data?.data || res.data || [];
+    const url = studentId ? `/api/Attendances/getall?studentId=${studentId}` : '/api/Attendances/getall';
+    const res = await apiClient.get(url);
+    const list = res.data?.data || res.data || [];
+    if (Array.isArray(list) && list.length > 0) {
+      return list.map((a: any) => ({
+        id: a.id,
+        date: a.date ? a.date.split('T')[0] : 'Bugün',
+        courseName: a.courseName || 'Ders',
+        status: a.status === 1 ? 'Geldi' : a.status === 2 ? 'Gelmedi' : a.status === 3 ? 'İzinli' : a.status === 4 ? 'Geç Kaldı' : 'Geldi',
+        note: a.note || '',
+      }));
+    }
+    return [];
   } catch {
     return [
       { id: 1, date: '2026-09-30', courseName: 'Matematik - YKS', status: 'Geldi', note: 'Zamanında katıldı' },

@@ -16,6 +16,7 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { showAlert } from '@/components/ui/CustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
@@ -36,27 +37,27 @@ export default function RegisterScreen() {
     const contact = emailOrPhone.trim();
 
     if (!code) {
-      Alert.alert('Uyarı', 'Lütfen kurumunuzdan aldığınız Veli Giriş Kodunu giriniz.');
+      showAlert('Giriş Kodu Gerekli', 'Lütfen kurumunuzdan aldığınız Veli Giriş Kodunu giriniz.', undefined, 'warning');
       return;
     }
 
     if (!contact) {
-      Alert.alert('Uyarı', 'Lütfen e-posta adresinizi veya telefon numaranızı giriniz.');
+      showAlert('İletişim Bilgisi Gerekli', 'Lütfen e-posta adresinizi veya telefon numaranızı giriniz.', undefined, 'warning');
       return;
     }
 
     if (!password) {
-      Alert.alert('Uyarı', 'Lütfen bir şifre belirleyiniz.');
+      showAlert('Şifre Belirleyiniz', 'Lütfen hesabınız için bir şifre belirleyiniz.', undefined, 'warning');
       return;
     }
 
     if (password.length < 4) {
-      Alert.alert('Uyarı', 'Şifreniz en az 4 karakter olmalıdır.');
+      showAlert('Şifre Çok Kısa', 'Şifreniz en az 4 karakter uzunluğunda olmalıdır.', undefined, 'warning');
       return;
     }
 
     if (password !== passwordConfirm) {
-      Alert.alert('Uyarı', 'Girdiğiniz şifreler birbiriyle eşleşmiyor.');
+      showAlert('Şifreler Eşleşmiyor', 'Girdiğiniz şifreler birbiriyle eşleşmiyor.', undefined, 'error');
       return;
     }
 
@@ -70,23 +71,25 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (res.success) {
-      Alert.alert(
+      showAlert(
         'Hesabınız Aktifleştirildi 🎉',
         'Veli kaydınız başarıyla oluşturuldu ve oturumunuz açıldı.',
         [
           {
-            text: 'Başla',
+            text: 'Uygulamaya Başla',
             onPress: () => router.replace('/(tabs)' as any),
           },
-        ]
+        ],
+        'success'
       );
     } else {
       const isAlreadyRegistered =
         res.message?.includes('daha önce kayıt') ||
-        res.message?.includes('zaten mevcut');
+        res.message?.includes('zaten mevcut') ||
+        res.message?.includes('zaten hesap');
 
       if (isAlreadyRegistered) {
-        Alert.alert(
+        showAlert(
           'Kayıt Zaten Mevcut',
           res.message || 'Bu giriş kodu veya iletişim bilgisi ile zaten kayıt olunmuştur.',
           [
@@ -95,10 +98,11 @@ export default function RegisterScreen() {
               text: 'Giriş Yap',
               onPress: () => router.replace('/(auth)/login' as any),
             },
-          ]
+          ],
+          'info'
         );
       } else {
-        Alert.alert('Aktivasyon Başarısız', res.message || 'Kayıt sırasında bir hata oluştu.');
+        showAlert('Aktivasyon Başarısız', res.message || 'Kayıt sırasında bir hata oluştu.', undefined, 'error');
       }
     }
   };

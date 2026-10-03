@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useAppTheme } from '@/contexts/theme-context';
 import { AuthProvider } from '@/contexts/auth-context';
+import { CustomAlert } from '@/components/ui/CustomAlert';
+import { TopToastProvider } from '@/components/ui/TopToast';
 
 function NavigationRoot() {
   const { isDark, palette } = useAppTheme();
@@ -22,6 +24,7 @@ function NavigationRoot() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
+      <CustomAlert />
     </>
   );
 }
@@ -31,7 +34,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <NavigationRoot />
+          <TopToastProvider>
+            <NavigationRoot />
+          </TopToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

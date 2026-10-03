@@ -5,6 +5,11 @@ export interface Course {
   name: string;
   code?: string;
   description?: string;
+  daysOfWeek?: string;
+  startTime?: string;
+  endTime?: string;
+  teacherName?: string;
+  branchName?: string;
   color?: string;
   isActive: boolean;
 }
@@ -20,24 +25,55 @@ export interface Branch {
   schedule?: string;
 }
 
-export async function fetchCourses(): Promise<Course[]> {
+export async function fetchCourses(studentId?: string | number): Promise<Course[]> {
   try {
-    const res = await apiClient.get('/api/v1/courses/getall');
-    return res.data?.data || res.data || [];
+    if (studentId) {
+      const enrollRes = await apiClient.get(`/api/CourseEnrollments/getall?studentId=${studentId}`);
+      const enrollments = enrollRes.data?.data || enrollRes.data;
+      if (Array.isArray(enrollments)) {
+        return enrollments
+          .filter((e: any) => (!e.studentId || e.studentId == studentId) && (e.status === 1 || e.isActive !== false))
+          .map((e: any) => ({
+            id: e.courseId || e.id,
+            name: e.courseName || e.name || 'Ders',
+            code: e.courseCode || 'KRS',
+            description: e.description || '',
+            daysOfWeek: e.daysOfWeek || undefined,
+            startTime: e.startTime || undefined,
+            endTime: e.endTime || undefined,
+            teacherName: e.teacherName || undefined,
+            branchName: e.branchName || undefined,
+            isActive: true,
+          }));
+      }
+      return [];
+    }
+
+    const res = await apiClient.get('/api/Courses/getall');
+    const allCourses = res.data?.data || res.data || [];
+    if (Array.isArray(allCourses)) {
+      return allCourses.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        code: c.code,
+        description: c.description,
+        daysOfWeek: c.daysOfWeek,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        teacherName: c.teacherName,
+        branchName: c.branchName,
+        isActive: c.isActive !== false,
+      }));
+    }
+    return [];
   } catch {
-    return [
-      { id: 1, name: 'Matematik - YKS', code: 'MAT-101', description: 'Temel & İleri Matematik', isActive: true },
-      { id: 2, name: 'Fizik', code: 'FIZ-201', description: 'Mekanik ve Elektrik', isActive: true },
-      { id: 3, name: 'Kimya', code: 'KIM-301', description: 'Organik & Genel Kimya', isActive: true },
-      { id: 4, name: 'Biyoloji', code: 'BIY-401', description: 'Hücre ve Sistemler', isActive: true },
-      { id: 5, name: 'Türkçe & Edebiyat', code: 'EDB-501', description: 'Paragraf & Dil Bilgisi', isActive: true },
-    ];
+    return [];
   }
 }
 
-export async function fetchBranches(): Promise<Branch[]> {
+export async function fetchBranches(tenantId?: string | number): Promise<Branch[]> {
   try {
-    const res = await apiClient.get('/api/v1/branches/getall');
+    const res = await apiClient.get('/api/Branches/getall');
     return res.data?.data || res.data || [];
   } catch {
     return [

@@ -16,6 +16,8 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { showAlert } from '@/components/ui/CustomAlert';
+import { showToast } from '@/components/ui/TopToast';
 import { checkServerPing } from '@/lib/services/auth-service';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -28,20 +30,10 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [serverStatus, setServerStatus] = useState<{ ok: boolean; url: string; timeMs?: number } | null>(null);
-
-  useEffect(() => {
-    checkServer();
-  }, []);
-
-  const checkServer = async () => {
-    const res = await checkServerPing();
-    setServerStatus(res);
-  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Uyarı', 'Lütfen e-posta / telefon numaranızı ve şifrenizi giriniz.');
+      showAlert('Eksik Bilgi', 'Lütfen e-posta veya telefon numaranızı ve şifrenizi giriniz.', undefined, 'warning');
       return;
     }
 
@@ -50,15 +42,11 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (res.success) {
+      showToast('Giriş Başarılı', 'Oturumunuz açıldı, hoş geldiniz!', 'success');
       router.replace('/(tabs)');
     } else {
-      Alert.alert('Giriş Başarısız', res.message || 'E-posta/telefon veya şifre hatalı.');
+      showAlert('Giriş Başarısız', res.message || 'E-posta/telefon veya şifre hatalı.', undefined, 'error');
     }
-  };
-
-  const handleDemoLogin = () => {
-    setEmail('admin@adminmail.com');
-    setPassword('Q1w212*_*');
   };
 
   return (
@@ -116,23 +104,19 @@ export default function LoginScreen() {
             loading={loading}
             style={{ marginTop: 8 }}
           />
-
-          <TouchableOpacity
-            style={styles.demoBtn}
-            onPress={handleDemoLogin}
-          >
-            <Text style={[styles.demoText, { color: palette.primary }]}>
-              Demo Yönetici ile Doldur
-            </Text>
-          </TouchableOpacity>
         </Card>
 
         {/* Bottom Actions */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register' as any)}>
-            <Text style={[styles.footerText, { color: palette.textSecondary }]}>
-              İlk kez mi giriş yapıyorsunuz?{' '}
-              <Text style={{ color: palette.primary, fontWeight: '700' }}>Veli Giriş Kodu ile Aktif Et</Text>
+          <Text style={[styles.footerText, { color: palette.textSecondary }]}>
+            İlk kez mi giriş yapıyorsunuz?
+          </Text>
+          <TouchableOpacity
+            style={styles.registerLinkBtn}
+            onPress={() => router.push('/(auth)/register' as any)}
+          >
+            <Text style={[styles.registerLinkText, { color: palette.primary }]}>
+              Veli Giriş Kodu ile Aktif Et
             </Text>
           </TouchableOpacity>
         </View>
@@ -168,22 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
-  serverBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  serverText: {
-    fontSize: 12,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
   card: {
     padding: 20,
   },
@@ -192,20 +160,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
   },
-  demoBtn: {
-    marginTop: 12,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  demoText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
   footer: {
-    marginTop: 20,
+    marginTop: 24,
     alignItems: 'center',
+    gap: 6,
   },
   footerText: {
     fontSize: 14,
+    textAlign: 'center',
+  },
+  registerLinkBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  registerLinkText: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

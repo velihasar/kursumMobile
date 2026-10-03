@@ -6,6 +6,7 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { showToast } from '@/components/ui/TopToast';
 import { getStoredServerUrl, setStoredServerUrl, getActiveApiBaseUrl } from '@/lib/server-url-storage';
 import { checkServerPing } from '@/lib/services/auth-service';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,14 +43,14 @@ export default function ServerSettingsScreen() {
   const handleSave = async () => {
     await setStoredServerUrl(customUrl);
     await loadSettings();
-    Alert.alert('Kaydedildi', 'Sunucu adresi güncellendi.');
+    showToast('Kaydedildi', 'Sunucu adresi güncellendi.', 'success');
   };
 
   const handleReset = async () => {
     await setStoredServerUrl('');
     setCustomUrl('');
     await loadSettings();
-    Alert.alert('Sıfırlandı', 'Otomatik IP algılama moduna dönüldü.');
+    showToast('Sıfırlandı', 'Otomatik IP algılama moduna dönüldü.', 'info');
   };
 
   return (

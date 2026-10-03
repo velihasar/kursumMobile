@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { showAlert } from '@/components/ui/CustomAlert';
 import { getActiveApiBaseUrl } from '@/lib/server-url-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,17 +20,23 @@ export default function ProfilScreen() {
   }, []);
 
   const handleLogout = () => {
-    Alert.alert('Çıkış Yap', 'Hesabınızdan çıkış yapmak istediğinize emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Çıkış Yap',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
+    showAlert(
+      'Çıkış Yap',
+      'Hesabınızdan çıkış yapmak istediğinize emin misiniz?',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Çıkış Yap',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/login');
+          },
         },
-      },
-    ]);
+      ],
+      'warning',
+      'log-out-outline'
+    );
   };
 
   return (
