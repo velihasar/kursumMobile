@@ -81,42 +81,11 @@ export default function LoginScreen() {
           <View style={[styles.iconWrapper, { backgroundColor: palette.primaryLight }]}>
             <Ionicons name="school" size={42} color={palette.primary} />
           </View>
-          <Text style={[styles.title, { color: palette.text }]}>Kursum Mobile</Text>
+          <Text style={[styles.title, { color: palette.text }]}>Kursum</Text>
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
             Veli, Öğretmen & Kurum Bilgi Sistemi
           </Text>
         </View>
-
-        {/* Server Status Indicator */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/(auth)/server-settings' as any)}
-          style={[
-            styles.serverBadge,
-            {
-              backgroundColor: serverStatus?.ok ? palette.successBg : palette.warningBg,
-              borderColor: serverStatus?.ok ? palette.success : palette.warning,
-            },
-          ]}
-        >
-          <Ionicons
-            name={serverStatus?.ok ? 'checkmark-circle' : 'alert-circle'}
-            size={16}
-            color={serverStatus?.ok ? palette.success : palette.warning}
-          />
-          <Text
-            style={[
-              styles.serverText,
-              { color: serverStatus?.ok ? palette.success : palette.warning },
-            ]}
-            numberOfLines={1}
-          >
-            {serverStatus?.ok
-              ? `Backend Aktif (${serverStatus.timeMs}ms)`
-              : `Bağlantı Ayarları: ${serverStatus?.url || 'Bulunamadı'}`}
-          </Text>
-          <Ionicons name="settings-outline" size={14} color={serverStatus?.ok ? palette.success : palette.warning} />
-        </TouchableOpacity>
 
         {/* Form Card */}
         <Card style={styles.card}>
