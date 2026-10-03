@@ -153,7 +153,7 @@ export default function RegisterScreen() {
 
           <Input
             label="E-Posta veya Telefon Numarası *"
-            placeholder="05XX XXX XX XX veya veli@mail.com"
+            placeholder="E-posta veya telefon giriniz"
             value={emailOrPhone}
             onChangeText={setEmailOrPhone}
             keyboardType="email-address"

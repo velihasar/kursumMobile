@@ -124,7 +124,7 @@ export default function LoginScreen() {
 
           <Input
             label="E-Posta veya Telefon Numarası"
-            placeholder="ornek@mail.com veya 05XX XXX XX XX"
+            placeholder="E-posta veya telefon giriniz"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
