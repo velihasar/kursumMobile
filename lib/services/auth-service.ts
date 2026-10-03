@@ -72,6 +72,38 @@ export async function registerParentApi(dto: RegisterParentDto): Promise<AuthRes
   return res.data;
 }
 
+export interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export async function updateProfileApi(
+  payload: UpdateProfilePayload
+): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const res = await apiClient.put('/api/v1/auth/update-profile', payload);
+    const data = res.data?.data || res.data;
+    return {
+      success: true,
+      message: res.data?.message || 'Profil bilgileriniz güncellendi.',
+      data,
+    };
+  } catch (error: any) {
+    const msg =
+      error?.response?.data?.message ||
+      (typeof error?.response?.data === 'string' ? error?.response?.data : error?.message) ||
+      'Profil güncellenemedi.';
+    return {
+      success: false,
+      message: msg,
+    };
+  }
+}
+
 export async function deleteAccountApi(): Promise<{ success: boolean; message: string }> {
   try {
     const res = await apiClient.post('/api/v1/auth/delete-account');
@@ -90,4 +122,6 @@ export async function deleteAccountApi(): Promise<{ success: boolean; message: s
     };
   }
 }
+
+
 

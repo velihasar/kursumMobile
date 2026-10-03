@@ -24,6 +24,7 @@ interface AuthContextType {
   register: (dto: RegisterDto) => Promise<{ success: boolean; message?: string }>;
   registerParent: (dto: RegisterParentDto) => Promise<{ success: boolean; message?: string }>;
   deleteAccount: () => Promise<{ success: boolean; message?: string }>;
+  updateUserSession: (updates: Partial<UserSession>) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => ({ success: false }),
   registerParent: async () => ({ success: false }),
   deleteAccount: async () => ({ success: false }),
+  updateUserSession: async () => { },
   logout: async () => { },
   checkAuth: async () => { },
 });
@@ -227,6 +229,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserSession = async (updates: Partial<UserSession>) => {
+    if (!user) return;
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    await saveUserData(updated);
+  };
+
   const logout = async () => {
     await clearAuth();
     setToken(null);
@@ -244,6 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         registerParent,
         deleteAccount,
+        updateUserSession,
         logout,
         checkAuth,
       }}
