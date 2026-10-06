@@ -123,5 +123,18 @@ export async function deleteAccountApi(): Promise<{ success: boolean; message: s
   }
 }
 
-
-
+export async function checkServerPing(url?: string): Promise<{ ok: boolean; message?: string; timeMs?: number }> {
+  const start = Date.now();
+  try {
+    const baseUrl = url || (await getActiveApiBaseUrl());
+    const res = await axios.get(`${baseUrl}/api/v1/health`, { timeout: 4000 });
+    const elapsed = Date.now() - start;
+    return { ok: true, message: `Bağlantı başarılı (${elapsed}ms)`, timeMs: elapsed };
+  } catch (error: any) {
+    const elapsed = Date.now() - start;
+    if (error?.response?.status) {
+      return { ok: true, message: `Sunucuya ulaşıldı (${error.response.status}) (${elapsed}ms)`, timeMs: elapsed };
+    }
+    return { ok: false, message: error?.message || 'Sunucuya ulaşılamadı', timeMs: elapsed };
+  }
+}

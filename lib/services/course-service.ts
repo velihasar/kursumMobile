@@ -76,10 +76,6 @@ export async function fetchBranches(tenantId?: string | number): Promise<Branch[
     const res = await apiClient.get('/api/Branches/getall');
     return res.data?.data || res.data || [];
   } catch {
-    return [
-      { id: 101, name: '12-A Sayısal', courseId: 1, courseName: 'Matematik', teacherName: 'Ahmet Hoca', classroom: 'Derslik 3', schedule: 'Pzt, Çar 09:00 - 11:30' },
-      { id: 102, name: '12-B Sayısal', courseId: 2, courseName: 'Fizik', teacherName: 'Zeynep Hoca', classroom: 'Lab 1', schedule: 'Salı, Per 13:00 - 15:30' },
-      { id: 103, name: '11-A Eşit Ağırlık', courseId: 5, courseName: 'Türkçe', teacherName: 'Mehmet Hoca', classroom: 'Derslik 1', schedule: 'Cuma 10:00 - 12:30' },
-    ];
+    return [];
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
@@ -11,6 +12,7 @@ import { QrScannerModal } from '@/components/ui/QrScannerModal';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function YoklamaScreen() {
+  const insets = useSafeAreaInsets();
   const { palette, isDark } = useAppTheme();
   const { user } = useAuth();
 
@@ -107,11 +109,17 @@ export default function YoklamaScreen() {
   };
 
   return (
-    <>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: palette.background }}
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      {/* Fixed Header */}
+      <View
+        style={[
+          styles.fixedHeader,
+          {
+            paddingTop: Math.max(insets.top + 8, 28),
+            backgroundColor: palette.background,
+            borderBottomColor: palette.border,
+          },
+        ]}
       >
         <View style={styles.headerTopRow}>
           <View style={{ flex: 1 }}>
@@ -122,7 +130,7 @@ export default function YoklamaScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.qrHeaderBtn, { backgroundColor: palette.primary }]}
+            style={[styles.qrHeaderBtn, { backgroundColor: palette.accent }]}
             onPress={() => setQrModalVisible(true)}
             activeOpacity={0.8}
           >
@@ -130,10 +138,16 @@ export default function YoklamaScreen() {
             <Text style={styles.qrHeaderBtnText}>QR Giriş</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-      {/* Multiple Children Switcher Tabs (if Parent has > 1 student) */}
-      {students.length > 1 && (
-        <View style={styles.studentTabsContainer}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
+      >
+        {/* Multiple Children Switcher Tabs (if Parent has > 1 student) */}
+        {students.length > 1 && (
+          <View style={styles.studentTabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studentTabsScroll}>
             {students.map((st) => {
               const isSelected = selectedStudentId === st.id;
@@ -264,40 +278,44 @@ export default function YoklamaScreen() {
           </Card>
         ))
       )}
-    </ScrollView>
+      </ScrollView>
 
-    {/* QR Attendance Scanner Modal */}
-    <QrScannerModal
-      visible={qrModalVisible}
-      onClose={() => setQrModalVisible(false)}
-      students={students}
-      initialStudentId={selectedStudentId}
-      onSuccess={() => loadData(selectedStudentId)}
-    />
-    </>
+      {/* QR Attendance Scanner Modal */}
+      <QrScannerModal
+        visible={qrModalVisible}
+        onClose={() => setQrModalVisible(false)}
+        students={students}
+        initialStudentId={selectedStudentId}
+        onSuccess={() => loadData(selectedStudentId)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 32,
+  fixedHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 16,
     gap: 12,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 3,
+    lineHeight: 18,
+  },
+  content: {
+    padding: 20,
   },
   qrHeaderBtn: {
     flexDirection: 'row',

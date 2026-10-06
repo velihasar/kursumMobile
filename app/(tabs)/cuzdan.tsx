@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
@@ -20,6 +21,7 @@ import { fetchParentStudents, ChildStudent } from '@/lib/services/student-servic
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CuzdanScreen() {
+  const insets = useSafeAreaInsets();
   const { palette, isDark } = useAppTheme();
   const { user } = useAuth();
 
@@ -71,6 +73,12 @@ export default function CuzdanScreen() {
     setRefreshing(false);
   };
 
+  const selectedStudent = students.find((s) => s.id === selectedStudentId) || students[0];
+
+  // Family totals if multiple students
+  const familyTotalBalance = students.reduce((acc, s) => acc + (s.paymentInfo?.balance || 0), 0);
+  const familyTotalDebt = students.reduce((acc, s) => acc + (s.paymentInfo?.totalDebt || 0), 0);
+
   // Filtered transactions
   const transactions = wallet?.transactions || [];
   const filteredTransactions =
@@ -79,92 +87,211 @@ export default function CuzdanScreen() {
       : transactions.filter((t) => t.type === selectedFilter);
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: palette.background }}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
-    >
-      <Text style={[styles.title, { color: palette.text }]}>Ödemeler & Cüzdan</Text>
-      <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-        Kantin bakiyesi, kurs aidatları ve hesap hareketleri
-      </Text>
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      {/* Fixed Header */}
+      <View
+        style={[
+          styles.fixedHeader,
+          {
+            paddingTop: Math.max(insets.top + 8, 28),
+            backgroundColor: palette.background,
+            borderBottomColor: palette.border,
+          },
+        ]}
+      >
+        <Text style={[styles.title, { color: palette.text }]}>Ödemeler & Cüzdan</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+          Kantin bakiyesi, kurs aidatları ve taksit planı
+        </Text>
+      </View>
 
-      {/* Multiple Children Switcher Tabs */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
+      >
+        {/* Family / Overall Summary Card (if multiple students) */}
       {students.length > 1 && (
-        <View style={styles.studentTabsContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studentTabsScroll}>
+        <Card style={[styles.familySummaryCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <View style={styles.familyHeaderRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.familyIconBadge, { backgroundColor: palette.primaryLight }]}>
+                <Ionicons name="people" size={18} color={palette.primary} />
+              </View>
+              <Text style={[styles.familyTitle, { color: palette.text }]}>
+                Aile Genel Finans Özeti ({students.length} Öğrenci)
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.familyDivider, { backgroundColor: palette.border }]} />
+
+          <View style={styles.familyStatsRow}>
+            <View style={styles.familyStatItem}>
+              <Text style={[styles.familyStatLabel, { color: palette.textSecondary }]}>Toplam Kantin Bakiyesi</Text>
+              <Text style={[styles.familyStatValue, { color: palette.success }]}>
+                ₺{familyTotalBalance.toFixed(2)}
+              </Text>
+            </View>
+
+            <View style={[styles.familyVerticalDivider, { backgroundColor: palette.border }]} />
+
+            <View style={styles.familyStatItem}>
+              <Text style={[styles.familyStatLabel, { color: palette.textSecondary }]}>Toplam Kalan Borç</Text>
+              <Text style={[styles.familyStatValue, { color: familyTotalDebt > 0 ? palette.accent : palette.text }]}>
+                ₺{familyTotalDebt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {/* Multiple Students Selection Cards */}
+      {students.length > 1 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 4, marginBottom: 10 }]}>
+            Öğrencilerim & Cüzdanları
+          </Text>
+
+          <View style={styles.studentCardsList}>
             {students.map((st) => {
-              const isSelected = selectedStudentId === st.id;
+              const isSelected = st.id === selectedStudentId;
+              const pInfo = st.paymentInfo;
+              const hasDebt = pInfo && (pInfo.nextPaymentAmount > 0 || pInfo.totalDebt > 0);
+
               return (
                 <TouchableOpacity
                   key={st.id}
                   style={[
-                    styles.studentTab,
+                    styles.studentWalletCard,
                     {
-                      backgroundColor: isSelected ? palette.primary : palette.card,
+                      backgroundColor: palette.card,
                       borderColor: isSelected ? palette.primary : palette.border,
+                      borderWidth: isSelected ? 2 : 1,
                     },
                   ]}
                   onPress={() => handleSelectStudent(st.id)}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name="person"
-                    size={14}
-                    color={isSelected ? '#FFFFFF' : palette.textSecondary}
-                  />
-                  <Text
+                  <View style={styles.studentCardTop}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View
+                        style={[
+                          styles.studentAvatarBox,
+                          {
+                            backgroundColor: isSelected ? palette.primaryLight : (isDark ? '#0F172A' : '#F1F5F9'),
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="person"
+                          size={18}
+                          color={isSelected ? palette.primary : palette.textSecondary}
+                        />
+                      </View>
+                      <View>
+                        <Text style={[styles.studentCardName, { color: palette.text }]}>{st.fullName}</Text>
+                        <Text style={[styles.studentCardSub, { color: palette.textSecondary }]}>
+                          Kantin: <Text style={{ color: palette.success, fontWeight: '700' }}>₺{pInfo?.balance?.toFixed(2) || '0.00'}</Text>
+                        </Text>
+                      </View>
+                    </View>
+
+                    {isSelected ? (
+                      <View style={[styles.selectedPill, { backgroundColor: palette.primary }]}>
+                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                        <Text style={styles.selectedPillText}>Seçili</Text>
+                      </View>
+                    ) : (
+                      <Badge
+                        label={hasDebt ? 'Taksit Var' : 'Ödendi'}
+                        variant={hasDebt ? 'accent' : 'success'}
+                      />
+                    )}
+                  </View>
+
+                  {/* Installment Line inside student card */}
+                  <View
                     style={[
-                      styles.studentTabText,
-                      { color: isSelected ? '#FFFFFF' : palette.text, fontWeight: isSelected ? '700' : '500' },
+                      styles.studentCardBottom,
+                      {
+                        backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
+                        borderColor: palette.border,
+                      },
                     ]}
                   >
-                    {st.fullName}
-                  </Text>
+                    {hasDebt ? (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={[styles.studentDueLabel, { color: palette.textSecondary }]}>
+                          Sonraki: <Text style={{ color: palette.accent, fontWeight: '700' }}>₺{pInfo.nextPaymentAmount.toFixed(2)}</Text>
+                        </Text>
+                        <Text style={[styles.studentDueDate, { color: palette.textMuted }]}>
+                          {pInfo.nextPaymentDate}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.studentNoDueText, { color: palette.success }]}>
+                        ✓ Tüm taksitler ödendi • Borç bulunmuyor
+                      </Text>
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-        </View>
+          </View>
+        </>
       )}
 
-      {/* Main Balance Card */}
-      <Card style={[styles.balanceCard, { backgroundColor: palette.primaryDark }]}>
+      {/* Selected Student Balance Card (if single student or detailed for selected) */}
+      <Card style={[styles.balanceCard, { backgroundColor: isDark ? '#0F2D4A' : '#1A7AD4' }]}>
         <View style={styles.balanceHeader}>
           <View>
-            <Text style={styles.balanceLabel}>Kantin & Harçlık Bakiyesi</Text>
+            <Text style={styles.balanceLabel}>
+              {selectedStudent ? `${selectedStudent.fullName} • Kantin Bakiyesi` : 'Kantin & Harçlık Bakiyesi'}
+            </Text>
             <Text style={styles.balanceAmount}>
               ₺{wallet?.balance !== undefined ? wallet.balance.toFixed(2) : '0.00'}
             </Text>
           </View>
           <View style={styles.balanceIconBadge}>
-            <Ionicons name="fast-food-outline" size={28} color="#FFFFFF" />
+            <Ionicons name="fast-food-outline" size={26} color="#FFFFFF" />
           </View>
         </View>
       </Card>
 
-      {/* Fee & Dues Summary Card */}
+      {/* Fee & Dues Summary Card for Selected Student */}
       <Card style={[styles.duesCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <View style={styles.duesHeader}>
           <View>
-            <Text style={[styles.duesTitle, { color: palette.text }]}>Kurs Taksit Durumu</Text>
+            <Text style={[styles.duesTitle, { color: palette.text }]}>
+              {selectedStudent ? `${selectedStudent.fullName} • Taksit Durumu` : 'Kurs Taksit Durumu'}
+            </Text>
             <Text style={[styles.duesSub, { color: palette.textSecondary }]}>
               Kalan Toplam Borç:{' '}
-              <Text style={{ fontWeight: '800', color: (wallet?.totalDebt || 0) > 0 ? palette.danger : palette.success }}>
+              <Text style={{ fontWeight: '800', color: (wallet?.totalDebt || 0) > 0 ? palette.accent : palette.success }}>
                 ₺{(wallet?.totalDebt || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </Text>
           </View>
           <Badge
             label={(wallet?.totalDebt || 0) > 0 ? 'Ödeme Var' : 'Borç Yok'}
-            variant={(wallet?.totalDebt || 0) > 0 ? 'warning' : 'success'}
+            variant={(wallet?.totalDebt || 0) > 0 ? 'accent' : 'success'}
           />
         </View>
 
         {(wallet?.nextPaymentAmount || 0) > 0 ? (
-          <View style={[styles.nextDueBox, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderColor: palette.border }]}>
-            <Ionicons name="calendar" size={22} color={palette.warning} />
+          <View
+            style={[
+              styles.nextDueBox,
+              {
+                backgroundColor: isDark ? '#2B1904' : '#FFF8F0',
+                borderColor: palette.accent,
+              },
+            ]}
+          >
+            <Ionicons name="calendar" size={22} color={palette.accent} />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.nextDueLabel, { color: palette.text }]}>
+              <Text style={[styles.nextDueLabel, { color: palette.accent }]}>
                 Yaklaşan Ödeme: ₺{(wallet?.nextPaymentAmount || 0).toFixed(2)}
               </Text>
               <Text style={[styles.nextDueDate, { color: palette.textSecondary }]}>
@@ -173,7 +300,7 @@ export default function CuzdanScreen() {
             </View>
           </View>
         ) : (
-          <View style={[styles.nextDueBox, { backgroundColor: palette.successBg }]}>
+          <View style={[styles.nextDueBox, { backgroundColor: palette.successBg, borderColor: palette.success }]}>
             <Ionicons name="checkmark-circle" size={22} color={palette.success} />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={[styles.nextDueLabel, { color: palette.success }]}>Tüm Ödemeler Tamamlandı</Text>
@@ -182,7 +309,7 @@ export default function CuzdanScreen() {
           </View>
         )}
 
-        {/* Dues List (if any) */}
+        {/* Dues List */}
         {wallet?.dues && wallet.dues.length > 0 && (
           <View style={styles.dueListContainer}>
             <Text style={[styles.dueListTitle, { color: palette.textSecondary }]}>Taksit Planı</Text>
@@ -198,7 +325,7 @@ export default function CuzdanScreen() {
                   </Text>
                   <Badge
                     label={due.statusText}
-                    variant={due.isPaid ? 'success' : due.statusText === 'Kısmi Ödendi' ? 'warning' : 'danger'}
+                    variant={due.isPaid ? 'success' : due.statusText === 'Kısmi Ödendi' ? 'warning' : 'accent'}
                   />
                 </View>
               </View>
@@ -211,8 +338,8 @@ export default function CuzdanScreen() {
       <View style={styles.filterRow}>
         {[
           { key: 'all', label: 'Tümü' },
-          { key: 'payment', label: 'Yüklemeler' },
-          { key: 'canteen', label: 'Harcamalar' },
+          { key: 'payment', label: 'Ödeme & Yükleme' },
+          { key: 'canteen', label: 'Kantin' },
           { key: 'due', label: 'Taksitler' },
         ].map((filter) => {
           const isSelected = selectedFilter === filter.key;
@@ -248,7 +375,7 @@ export default function CuzdanScreen() {
 
       {filteredTransactions.length === 0 ? (
         <Card style={[styles.emptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Ionicons name="receipt-outline" size={40} color={palette.textMuted} />
+          <Ionicons name="receipt-outline" size={36} color={palette.textMuted} />
           <Text style={[styles.emptyTitle, { color: palette.text }]}>İşlem Bulunamadı</Text>
           <Text style={[styles.emptySubtitle, { color: palette.textSecondary }]}>
             Bu kategoriye ait herhangi bir hesap hareketi bulunmamaktadır.
@@ -256,81 +383,216 @@ export default function CuzdanScreen() {
         </Card>
       ) : (
         filteredTransactions.map((t) => {
+          const isPayment = t.type === 'payment';
+          const isCanteen = t.type === 'canteen';
+          const isDue = t.type === 'due';
           const isPositive = t.amount > 0;
+          const absAmount = Math.abs(t.amount);
+
           return (
             <Card key={t.id} style={[styles.txCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
               <View style={styles.txRow}>
                 <View
                   style={[
                     styles.txIcon,
-                    { backgroundColor: isPositive ? palette.successBg : palette.dangerBg },
+                    {
+                      backgroundColor: isPayment
+                        ? palette.successBg
+                        : isCanteen
+                        ? (isDark ? '#2D1B0B' : '#FFF4E6')
+                        : palette.primaryLight,
+                    },
                   ]}
                 >
                   <Ionicons
-                    name={isPositive ? 'arrow-down' : 'arrow-up'}
+                    name={
+                      isPayment
+                        ? 'arrow-down'
+                        : isCanteen
+                        ? 'fast-food'
+                        : 'calendar'
+                    }
                     size={18}
-                    color={isPositive ? palette.success : palette.danger}
+                    color={
+                      isPayment
+                        ? palette.success
+                        : isCanteen
+                        ? palette.accent
+                        : palette.primary
+                    }
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.txTitle, { color: palette.text }]}>{t.title}</Text>
                   <Text style={[styles.txDate, { color: palette.textMuted }]}>{t.date}</Text>
                 </View>
-                <Text
-                  style={[
-                    styles.txAmount,
-                    { color: isPositive ? palette.success : palette.text },
-                  ]}
-                >
-                  {isPositive ? `+₺${t.amount.toFixed(2)}` : `₺${t.amount.toFixed(2)}`}
-                </Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text
+                    style={[
+                      styles.txAmount,
+                      {
+                        color: isPayment
+                          ? palette.success
+                          : isCanteen
+                          ? palette.accent
+                          : palette.text,
+                      },
+                    ]}
+                  >
+                    {isPayment
+                      ? `+₺${absAmount.toFixed(2)}`
+                      : isCanteen
+                      ? `-₺${absAmount.toFixed(2)}`
+                      : `₺${absAmount.toFixed(2)}`}
+                  </Text>
+                  {isDue && (
+                    <Badge
+                      label={t.status === 'completed' ? 'Ödendi' : 'Planlandı'}
+                      variant={t.status === 'completed' ? 'success' : 'accent'}
+                    />
+                  )}
+                </View>
               </View>
             </Card>
           );
         })
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 32,
+  fixedHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 3,
+    lineHeight: 18,
+  },
+  content: {
+    padding: 20,
+  },
+  familySummaryCard: {
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 16,
   },
-  studentTabsContainer: {
-    marginBottom: 14,
-  },
-  studentTabsScroll: {
+  familyHeaderRow: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  studentTab: {
+  familyIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  familyTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  familyDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  familyStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  familyStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  familyVerticalDivider: {
+    width: 1,
+    height: 34,
+  },
+  familyStatLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
+  familyStatValue: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  studentCardsList: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  studentWalletCard: {
+    padding: 14,
+    borderRadius: 16,
+  },
+  studentCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  studentAvatarBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentCardName: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  studentCardSub: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  selectedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 12,
+  },
+  selectedPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  studentCardBottom: {
+    padding: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
   },
-  studentTabText: {
-    fontSize: 13,
+  studentDueLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  studentDueDate: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  studentNoDueText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   balanceCard: {
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 16,
+    padding: 18,
+    borderRadius: 18,
+    marginBottom: 14,
   },
   balanceHeader: {
     flexDirection: 'row',
@@ -338,19 +600,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
   },
   balanceAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: '#FFFFFF',
     marginTop: 4,
   },
   balanceIconBadge: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
@@ -369,11 +631,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   duesTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
   },
   duesSub: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
   },
   nextDueBox: {
@@ -385,7 +647,7 @@ const styles = StyleSheet.create({
   },
   nextDueLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   nextDueDate: {
     fontSize: 12,
@@ -398,8 +660,8 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(150, 150, 150, 0.15)',
   },
   dueListTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textTransform: 'uppercase',
     marginBottom: 8,
     letterSpacing: 0.5,
@@ -440,9 +702,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 10,
+    fontSize: 15,
+    fontWeight: '800',
   },
   txCard: {
     marginBottom: 8,
@@ -481,12 +742,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginTop: 10,
+    marginTop: 8,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
   },

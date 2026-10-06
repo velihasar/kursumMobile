@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
@@ -19,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfilScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, logout, deleteAccount } = useAuth();
   const { palette, isDark, toggleTheme } = useAppTheme();
 
@@ -70,13 +72,28 @@ export default function ProfilScreen() {
   };
 
   return (
-    <>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: palette.background }}
-        contentContainerStyle={styles.content}
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      {/* Fixed Header */}
+      <View
+        style={[
+          styles.fixedHeader,
+          {
+            paddingTop: Math.max(insets.top + 8, 28),
+            backgroundColor: palette.background,
+            borderBottomColor: palette.border,
+          },
+        ]}
       >
         <Text style={[styles.title, { color: palette.text }]}>Profil & Ayarlar</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+          Kullanıcı bilgileri, tercihler ve uygulama ayarları
+        </Text>
+      </View>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
+      >
         {/* User Info Card */}
         <Card style={styles.profileCard}>
           <View style={styles.profileRow}>
@@ -217,20 +234,28 @@ export default function ProfilScreen() {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 32,
+  fixedHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    marginBottom: 20,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 13,
+    marginTop: 3,
+    lineHeight: 18,
+  },
+  content: {
+    padding: 20,
   },
   profileCard: {
     padding: 18,

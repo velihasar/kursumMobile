@@ -1,6 +1,7 @@
 import { apiClient } from '../api-client';
 import { fetchCourses, Course } from './course-service';
 import { fetchAttendances } from './attendance-service';
+import { fetchWalletInfo, WalletInfo } from './wallet-service';
 
 export interface ChildStudent {
   id: number;
@@ -15,6 +16,13 @@ export interface ChildStudent {
     time: string;
     classroom?: string;
     teacher?: string;
+  };
+  paymentInfo?: {
+    balance: number;
+    nextPaymentAmount: number;
+    nextPaymentDate: string;
+    totalDebt: number;
+    hasDebt: boolean;
   };
 }
 
@@ -140,9 +148,10 @@ export async function fetchParentStudents(parentId?: number | string, defaultStu
       const students: ChildStudent[] = await Promise.all(
         matched.map(async (sp: any) => {
           const sId = sp.studentId;
-          const [courses, attendances] = await Promise.all([
+          const [courses, attendances, wallet] = await Promise.all([
             fetchCourses(sId),
             fetchAttendances(sId),
+            fetchWalletInfo(sId),
           ]);
 
           const present = attendances.filter((a) => a.status === 'Geldi').length;
@@ -157,6 +166,13 @@ export async function fetchParentStudents(parentId?: number | string, defaultStu
             courseCount: courses.length,
             attendanceRate: attendances.length > 0 ? rate : 100,
             nextLesson: calculateNextLesson(courses),
+            paymentInfo: {
+              balance: wallet.balance,
+              nextPaymentAmount: wallet.nextPaymentAmount,
+              nextPaymentDate: wallet.nextPaymentDate,
+              totalDebt: wallet.totalDebt,
+              hasDebt: (wallet.nextPaymentAmount > 0 || wallet.totalDebt > 0),
+            },
           };
         })
       );
@@ -164,9 +180,10 @@ export async function fetchParentStudents(parentId?: number | string, defaultStu
     }
 
     if (defaultStudentId) {
-      const [courses, attendances] = await Promise.all([
+      const [courses, attendances, wallet] = await Promise.all([
         fetchCourses(defaultStudentId),
         fetchAttendances(defaultStudentId),
+        fetchWalletInfo(defaultStudentId),
       ]);
 
       const present = attendances.filter((a) => a.status === 'Geldi').length;
@@ -179,6 +196,13 @@ export async function fetchParentStudents(parentId?: number | string, defaultStu
           courseCount: courses.length,
           attendanceRate: attendances.length > 0 ? rate : 100,
           nextLesson: calculateNextLesson(courses),
+          paymentInfo: {
+            balance: wallet.balance,
+            nextPaymentAmount: wallet.nextPaymentAmount,
+            nextPaymentDate: wallet.nextPaymentDate,
+            totalDebt: wallet.totalDebt,
+            hasDebt: (wallet.nextPaymentAmount > 0 || wallet.totalDebt > 0),
+          },
         },
       ];
     }
