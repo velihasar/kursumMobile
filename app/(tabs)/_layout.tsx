@@ -69,13 +69,20 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: palette.tabBar,
           borderTopColor: palette.tabBarBorder,
+          borderTopWidth: 1,
           height: tabHeight,
           paddingBottom: bottomPadding,
           paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.03,
+          shadowRadius: 10,
+          elevation: 4,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
+          marginTop: 2,
         },
       }}
     >
@@ -84,11 +91,14 @@ export default function TabLayout() {
         options={{
           title: 'Anasayfa',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={size}
-              color={color}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={focused ? 'grid' : 'grid-outline'}
+                size={22}
+                color={color}
+              />
+              {focused && <View style={[styles.activeDot, { backgroundColor: palette.primary }]} />}
+            </View>
           ),
         }}
       />
@@ -97,11 +107,14 @@ export default function TabLayout() {
         options={{
           title: 'Dersler',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'book' : 'book-outline'}
-              size={size}
-              color={color}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={focused ? 'book' : 'book-outline'}
+                size={22}
+                color={color}
+              />
+              {focused && <View style={[styles.activeDot, { backgroundColor: palette.primary }]} />}
+            </View>
           ),
         }}
       />
@@ -110,11 +123,14 @@ export default function TabLayout() {
         options={{
           title: 'Yoklama',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={size}
-              color={color}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={focused ? 'checkbox' : 'checkbox-outline'}
+                size={22}
+                color={color}
+              />
+              {focused && <View style={[styles.activeDot, { backgroundColor: palette.primary }]} />}
+            </View>
           ),
         }}
       />
@@ -123,11 +139,14 @@ export default function TabLayout() {
         options={{
           title: 'Cüzdan',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'wallet' : 'wallet-outline'}
-              size={size}
-              color={color}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={focused ? 'wallet' : 'wallet-outline'}
+                size={22}
+                color={color}
+              />
+              {focused && <View style={[styles.activeDot, { backgroundColor: palette.primary }]} />}
+            </View>
           ),
         }}
       />
@@ -136,11 +155,14 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={size}
-              color={color}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={focused ? 'person' : 'person-outline'}
+                size={22}
+                color={color}
+              />
+              {focused && <View style={[styles.activeDot, { backgroundColor: palette.primary }]} />}
+            </View>
           ),
         }}
       />
@@ -158,5 +180,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+  },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 26,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 2,
   },
 });

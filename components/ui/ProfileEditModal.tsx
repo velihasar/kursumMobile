@@ -137,7 +137,7 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.5)' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -18,7 +18,7 @@ export const Card: React.FC<CardProps> = ({ children, style, variant = 'elevated
         {
           backgroundColor: palette.card,
           borderColor: palette.border,
-          borderWidth: variant === 'outlined' ? 1 : 0.8,
+          borderWidth: variant === 'outlined' ? 1 : 1,
         },
         variant === 'elevated' && styles.shadow,
         style,
@@ -31,15 +31,15 @@ export const Card: React.FC<CardProps> = ({ children, style, variant = 'elevated
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
   },
   shadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 2,
   },
 });

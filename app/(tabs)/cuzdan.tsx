@@ -18,6 +18,7 @@ import {
   formatTurkishDate,
 } from '@/lib/services/wallet-service';
 import { fetchParentStudents, ChildStudent } from '@/lib/services/student-service';
+import { WalletSkeleton } from '@/components/ui/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CuzdanScreen() {
@@ -25,6 +26,7 @@ export default function CuzdanScreen() {
   const { palette, isDark } = useAppTheme();
   const { user } = useAuth();
 
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [students, setStudents] = useState<ChildStudent[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(
@@ -33,30 +35,35 @@ export default function CuzdanScreen() {
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'payment' | 'canteen' | 'due'>('all');
 
-  const loadData = async (targetStudentId?: number) => {
-    const parentId = user?.parentId;
-    const defaultStudentId = user?.studentId;
+  const loadData = async (targetStudentId?: number, isInitial = false) => {
+    if (isInitial) setLoading(true);
+    try {
+      const parentId = user?.parentId;
+      const defaultStudentId = user?.studentId;
 
-    const sList = await fetchParentStudents(parentId, defaultStudentId);
-    setStudents(sList);
+      const sList = await fetchParentStudents(parentId, defaultStudentId);
+      setStudents(sList);
 
-    const activeId =
-      targetStudentId !== undefined
-        ? targetStudentId
-        : selectedStudentId !== undefined
-        ? selectedStudentId
-        : sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined);
+      const activeId =
+        targetStudentId !== undefined
+          ? targetStudentId
+          : selectedStudentId !== undefined
+          ? selectedStudentId
+          : sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined);
 
-    if (activeId !== selectedStudentId && activeId !== undefined) {
-      setSelectedStudentId(activeId);
+      if (activeId !== selectedStudentId && activeId !== undefined) {
+        setSelectedStudentId(activeId);
+      }
+
+      const w = await fetchWalletInfo(activeId);
+      setWallet(w);
+    } finally {
+      if (isInitial) setLoading(false);
     }
-
-    const w = await fetchWalletInfo(activeId);
-    setWallet(w);
   };
 
   useEffect(() => {
-    loadData();
+    loadData(undefined, true);
   }, [user?.studentId, user?.parentId]);
 
   const handleSelectStudent = async (sId: number) => {
@@ -69,7 +76,7 @@ export default function CuzdanScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData(selectedStudentId);
+    await loadData(selectedStudentId, false);
     setRefreshing(false);
   };
 
@@ -110,9 +117,13 @@ export default function CuzdanScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
       >
-        {/* Family / Overall Summary Card (if multiple students) */}
-      {students.length > 1 && (
-        <Card style={[styles.familySummaryCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        {loading ? (
+          <WalletSkeleton />
+        ) : (
+          <>
+            {/* Family / Overall Summary Card (if multiple students) */}
+            {students.length > 1 && (
+              <Card style={[styles.familySummaryCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.familyHeaderRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={[styles.familyIconBadge, { backgroundColor: palette.primaryLight }]}>
@@ -242,22 +253,39 @@ export default function CuzdanScreen() {
         </>
       )}
 
-      {/* Selected Student Balance Card (if single student or detailed for selected) */}
-      <Card style={[styles.balanceCard, { backgroundColor: isDark ? '#0F2D4A' : '#1A7AD4' }]}>
-        <View style={styles.balanceHeader}>
-          <View>
-            <Text style={styles.balanceLabel}>
-              {selectedStudent ? `${selectedStudent.fullName} • Kantin Bakiyesi` : 'Kantin & Harçlık Bakiyesi'}
-            </Text>
-            <Text style={styles.balanceAmount}>
-              ₺{wallet?.balance !== undefined ? wallet.balance.toFixed(2) : '0.00'}
+      {/* Selected Student Balance Card (Digital Bank Card Form) */}
+      <View
+        style={[
+          styles.digitalCard,
+          {
+            backgroundColor: isDark ? '#172554' : '#1E3A8A',
+          },
+        ]}
+      >
+        {/* Card Top Row: Chip icon & Student name + canteen icon */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.cardChipRow}>
+            <View style={styles.simChip}>
+              <View style={styles.simChipInner} />
+            </View>
+            <Text style={styles.cardHolderText} numberOfLines={1}>
+              {selectedStudent ? `${selectedStudent.fullName.toUpperCase()} • KANTİN BAKİYESİ` : 'KANTİN & HARÇLIK BAKİYESİ'}
             </Text>
           </View>
-          <View style={styles.balanceIconBadge}>
-            <Ionicons name="fast-food-outline" size={26} color="#FFFFFF" />
+
+          <View style={styles.cardCanteenBadge}>
+            <Ionicons name="fast-food" size={16} color="#FFFFFF" />
           </View>
         </View>
-      </Card>
+
+        {/* Card Middle: Available Balance */}
+        <View style={styles.cardBalanceSection}>
+          <Text style={styles.cardBalanceLabel}>KULLANILABİLİR BAKİYE</Text>
+          <Text style={styles.cardBalanceAmount}>
+            ₺{wallet?.balance !== undefined ? wallet.balance.toFixed(2) : '0.00'}
+          </Text>
+        </View>
+      </View>
 
       {/* Fee & Dues Summary Card for Selected Student */}
       <Card style={[styles.duesCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -274,7 +302,7 @@ export default function CuzdanScreen() {
             </Text>
           </View>
           <Badge
-            label={(wallet?.totalDebt || 0) > 0 ? 'Ödeme Var' : 'Borç Yok'}
+            label={(wallet?.totalDebt || 0) > 0 ? 'Taksit Var' : 'Borç Yok'}
             variant={(wallet?.totalDebt || 0) > 0 ? 'accent' : 'success'}
           />
         </View>
@@ -284,13 +312,15 @@ export default function CuzdanScreen() {
             style={[
               styles.nextDueBox,
               {
-                backgroundColor: isDark ? '#2B1904' : '#FFF8F0',
-                borderColor: palette.accent,
+                backgroundColor: isDark ? '#2D1B0B' : '#FFF7ED',
+                borderColor: isDark ? '#451A03' : '#FFEDD5',
               },
             ]}
           >
-            <Ionicons name="calendar" size={22} color={palette.accent} />
-            <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={[styles.dueStatusIconBox, { backgroundColor: isDark ? '#3D2406' : '#FFEDD5' }]}>
+              <Ionicons name="calendar" size={20} color={palette.accent} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.nextDueLabel, { color: palette.accent }]}>
                 Yaklaşan Ödeme: ₺{(wallet?.nextPaymentAmount || 0).toFixed(2)}
               </Text>
@@ -300,11 +330,13 @@ export default function CuzdanScreen() {
             </View>
           </View>
         ) : (
-          <View style={[styles.nextDueBox, { backgroundColor: palette.successBg, borderColor: palette.success }]}>
-            <Ionicons name="checkmark-circle" size={22} color={palette.success} />
-            <View style={{ flex: 1, marginLeft: 10 }}>
+          <View style={[styles.nextDueBox, { backgroundColor: palette.successBg, borderColor: isDark ? '#065F46' : '#D1FAE5' }]}>
+            <View style={[styles.dueStatusIconBox, { backgroundColor: isDark ? '#064E3B' : '#D1FAE5' }]}>
+              <Ionicons name="checkmark-circle" size={20} color={palette.success} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.nextDueLabel, { color: palette.success }]}>Tüm Ödemeler Tamamlandı</Text>
-              <Text style={[styles.nextDueDate, { color: palette.textSecondary }]}>Gecikmiş veya bekleyen taksit bulunmuyor.</Text>
+              <Text style={[styles.nextDueDate, { color: palette.textSecondary }]}>Gecikmiş veya bekleyen bir taksitiniz bulunmuyor.</Text>
             </View>
           </View>
         )}
@@ -314,13 +346,23 @@ export default function CuzdanScreen() {
           <View style={styles.dueListContainer}>
             <Text style={[styles.dueListTitle, { color: palette.textSecondary }]}>Taksit Planı</Text>
             {wallet.dues.map((due) => (
-              <View key={due.id} style={[styles.dueItemRow, { borderBottomColor: palette.border }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.dueItemName, { color: palette.text }]}>{due.title}</Text>
-                  <Text style={[styles.dueItemDate, { color: palette.textMuted }]}>Vade: {due.dueDate}</Text>
+              <View key={due.id} style={[styles.dueItemRow, { borderBottomColor: palette.borderLight }]}>
+                <View style={styles.dueLeftCol}>
+                  <View style={[styles.dueItemIconBox, { backgroundColor: due.isPaid ? palette.successBg : palette.primaryLight }]}>
+                    <Ionicons
+                      name={due.isPaid ? 'checkmark-circle-outline' : 'calendar-outline'}
+                      size={16}
+                      color={due.isPaid ? palette.success : palette.primary}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={[styles.dueItemName, { color: palette.text }]}>{due.title}</Text>
+                    <Text style={[styles.dueItemDate, { color: palette.textMuted }]}>Vade: {due.dueDate}</Text>
+                  </View>
                 </View>
+
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.dueItemAmount, { color: due.isPaid ? palette.textMuted : palette.text }]}>
+                  <Text style={[styles.dueItemAmount, { color: palette.text }]}>
                     ₺{due.amount.toFixed(2)}
                   </Text>
                   <Badge
@@ -334,48 +376,57 @@ export default function CuzdanScreen() {
         )}
       </Card>
 
-      {/* Filter Chips */}
-      <View style={styles.filterRow}>
-        {[
-          { key: 'all', label: 'Tümü' },
-          { key: 'payment', label: 'Ödeme & Yükleme' },
-          { key: 'canteen', label: 'Kantin' },
-          { key: 'due', label: 'Taksitler' },
-        ].map((filter) => {
-          const isSelected = selectedFilter === filter.key;
-          return (
-            <TouchableOpacity
-              key={filter.key}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: isSelected ? palette.primary : palette.card,
-                  borderColor: isSelected ? palette.primary : palette.border,
-                },
-              ]}
-              onPress={() => setSelectedFilter(filter.key as any)}
-            >
-              <Text
+      {/* Filter Chips Horizontal Scroll */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          {[
+            { key: 'all', label: 'Tümü' },
+            { key: 'payment', label: 'Ödeme & Yükleme' },
+            { key: 'canteen', label: 'Kantin' },
+            { key: 'due', label: 'Taksitler' },
+          ].map((filter) => {
+            const isSelected = selectedFilter === filter.key;
+            return (
+              <TouchableOpacity
+                key={filter.key}
                 style={[
-                  styles.filterChipText,
-                  { color: isSelected ? '#FFFFFF' : palette.textSecondary, fontWeight: isSelected ? '700' : '500' },
+                  styles.filterChip,
+                  {
+                    backgroundColor: isSelected ? palette.primary : palette.card,
+                    borderColor: isSelected ? palette.primary : palette.border,
+                  },
                 ]}
+                onPress={() => setSelectedFilter(filter.key as any)}
+                activeOpacity={0.8}
               >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: isSelected ? '#FFFFFF' : palette.textSecondary, fontWeight: isSelected ? '700' : '600' },
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Transactions History */}
-      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 12 }]}>
+      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 14 }]}>
         Hesap Hareketleri ({filteredTransactions.length})
       </Text>
 
       {filteredTransactions.length === 0 ? (
         <Card style={[styles.emptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Ionicons name="receipt-outline" size={36} color={palette.textMuted} />
+          <View style={[styles.emptyTxIconBox, { backgroundColor: palette.primaryLight }]}>
+            <Ionicons name="receipt-outline" size={28} color={palette.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: palette.text }]}>İşlem Bulunamadı</Text>
           <Text style={[styles.emptySubtitle, { color: palette.textSecondary }]}>
             Bu kategoriye ait herhangi bir hesap hareketi bulunmamaktadır.
@@ -386,7 +437,6 @@ export default function CuzdanScreen() {
           const isPayment = t.type === 'payment';
           const isCanteen = t.type === 'canteen';
           const isDue = t.type === 'due';
-          const isPositive = t.amount > 0;
           const absAmount = Math.abs(t.amount);
 
           return (
@@ -399,7 +449,7 @@ export default function CuzdanScreen() {
                       backgroundColor: isPayment
                         ? palette.successBg
                         : isCanteen
-                        ? (isDark ? '#2D1B0B' : '#FFF4E6')
+                        ? (isDark ? '#2D1B0B' : '#FFF7ED')
                         : palette.primaryLight,
                     },
                   ]}
@@ -423,7 +473,7 @@ export default function CuzdanScreen() {
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[styles.txTitle, { color: palette.text }]}>{t.title}</Text>
+                  <Text style={[styles.txTitle, { color: palette.text }]} numberOfLines={1}>{t.title}</Text>
                   <Text style={[styles.txDate, { color: palette.textMuted }]}>{t.date}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -457,6 +507,8 @@ export default function CuzdanScreen() {
           );
         })
       )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -479,11 +531,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   content: {
-    padding: 20,
+    padding: 18,
   },
   familySummaryCard: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     marginBottom: 16,
   },
@@ -535,7 +587,7 @@ const styles = StyleSheet.create({
   },
   studentWalletCard: {
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 18,
   },
   studentCardTop: {
     flexDirection: 'row',
@@ -574,7 +626,7 @@ const styles = StyleSheet.create({
   studentCardBottom: {
     padding: 9,
     paddingHorizontal: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
   },
   studentDueLabel: {
@@ -589,38 +641,82 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  balanceCard: {
-    padding: 18,
-    borderRadius: 18,
-    marginBottom: 14,
+
+  /* Digital Bank Card Form */
+  digitalCard: {
+    padding: 20,
+    borderRadius: 22,
+    marginBottom: 16,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  balanceHeader: {
+  cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  balanceLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '600',
+  cardChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
   },
-  balanceAmount: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginTop: 4,
-  },
-  balanceIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  simChip: {
+    width: 26,
+    height: 19,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+    padding: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  simChipInner: {
+    width: '100%',
+    height: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.25)',
+    borderRadius: 2,
+  },
+  cardHolderText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    flexShrink: 1,
+  },
+  cardCanteenBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardBalanceSection: {
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  cardBalanceLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.75)',
+    letterSpacing: 0.8,
+  },
+  cardBalanceAmount: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
+
+  /* Fee & Dues Summary */
   duesCard: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     marginBottom: 14,
   },
@@ -642,8 +738,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+  },
+  dueStatusIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   nextDueLabel: {
     fontSize: 13,
@@ -657,21 +760,34 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.15)',
+    borderTopColor: 'rgba(150, 150, 150, 0.12)',
   },
   dueListTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
     marginBottom: 8,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   dueItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+  },
+  dueLeftCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  dueItemIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dueItemName: {
     fontSize: 13,
@@ -682,33 +798,40 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dueItemAmount: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     marginBottom: 2,
   },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
+
+  /* Filters */
+  filterContainer: {
+    marginBottom: 10,
+    marginHorizontal: -18,
+  },
+  filterScrollContent: {
+    paddingHorizontal: 18,
+    gap: 8,
   },
   filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     borderWidth: 1,
   },
   filterChipText: {
     fontSize: 12,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
+
+  /* Transactions */
   txCard: {
     marginBottom: 8,
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
   },
   txRow: {
@@ -716,15 +839,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   txTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   txDate: {
     fontSize: 11,
@@ -732,23 +855,33 @@ const styles = StyleSheet.create({
   },
   txAmount: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   emptyCard: {
     alignItems: 'center',
     padding: 24,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     marginTop: 8,
   },
+  emptyTxIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    marginTop: 8,
+    fontWeight: '800',
+    marginTop: 4,
   },
   emptySubtitle: {
     fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
+

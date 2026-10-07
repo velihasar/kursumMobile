@@ -9,6 +9,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { fetchAttendances, AttendanceRecord } from '@/lib/services/attendance-service';
 import { fetchParentStudents, ChildStudent } from '@/lib/services/student-service';
 import { QrScannerModal } from '@/components/ui/QrScannerModal';
+import { AttendanceSkeleton } from '@/components/ui/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function YoklamaScreen() {
@@ -16,6 +17,7 @@ export default function YoklamaScreen() {
   const { palette, isDark } = useAppTheme();
   const { user } = useAuth();
 
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [students, setStudents] = useState<ChildStudent[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(
@@ -25,27 +27,32 @@ export default function YoklamaScreen() {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'Geldi' | 'Gelmedi' | 'İzinli' | 'Geç Kaldı'>('all');
   const [qrModalVisible, setQrModalVisible] = useState(false);
 
-  const loadData = async (targetStudentId?: number) => {
-    const parentId = user?.parentId;
-    const defaultStudentId = user?.studentId;
+  const loadData = async (targetStudentId?: number, isInitial = false) => {
+    if (isInitial) setLoading(true);
+    try {
+      const parentId = user?.parentId;
+      const defaultStudentId = user?.studentId;
 
-    const sList = await fetchParentStudents(parentId, defaultStudentId);
-    setStudents(sList);
+      const sList = await fetchParentStudents(parentId, defaultStudentId);
+      setStudents(sList);
 
-    const activeId = targetStudentId !== undefined
-      ? targetStudentId
-      : (selectedStudentId !== undefined ? selectedStudentId : (sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined)));
+      const activeId = targetStudentId !== undefined
+        ? targetStudentId
+        : (selectedStudentId !== undefined ? selectedStudentId : (sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined)));
 
-    if (activeId !== selectedStudentId && activeId !== undefined) {
-      setSelectedStudentId(activeId);
+      if (activeId !== selectedStudentId && activeId !== undefined) {
+        setSelectedStudentId(activeId);
+      }
+
+      const list = await fetchAttendances(activeId);
+      setRecords(list);
+    } finally {
+      if (isInitial) setLoading(false);
     }
-
-    const list = await fetchAttendances(activeId);
-    setRecords(list);
   };
 
   useEffect(() => {
-    loadData();
+    loadData(undefined, true);
   }, [user?.studentId, user?.parentId]);
 
   const handleSelectStudent = async (sId: number) => {
@@ -58,7 +65,7 @@ export default function YoklamaScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData(selectedStudentId);
+    await loadData(selectedStudentId, false);
     setRefreshing(false);
   };
 
@@ -145,9 +152,13 @@ export default function YoklamaScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
       >
-        {/* Multiple Children Switcher Tabs (if Parent has > 1 student) */}
-        {students.length > 1 && (
-          <View style={styles.studentTabsContainer}>
+        {loading ? (
+          <AttendanceSkeleton />
+        ) : (
+          <>
+            {/* Multiple Children Switcher Tabs (if Parent has > 1 student) */}
+            {students.length > 1 && (
+              <View style={styles.studentTabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studentTabsScroll}>
             {students.map((st) => {
               const isSelected = selectedStudentId === st.id;
@@ -187,69 +198,113 @@ export default function YoklamaScreen() {
       <Card style={[styles.rateCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <View style={styles.rateRow}>
           <View>
-            <Text style={[styles.rateLabel, { color: palette.textSecondary }]}>Genel Katılım Oranı</Text>
+            <Text style={[styles.rateLabel, { color: palette.textSecondary }]}>GENEL KATILIM ORANI</Text>
             <Text style={[styles.rateValue, { color: attendanceRate >= 85 ? palette.success : palette.warning }]}>
               %{attendanceRate}
             </Text>
             <Text style={[styles.rateSub, { color: palette.textMuted }]}>
-              Toplam {totalRecords} ders kaydından
+              Toplam <Text style={{ fontWeight: '700', color: palette.text }}>{totalRecords}</Text> ders kaydından
             </Text>
           </View>
-          <View style={[styles.rateBadgeBox, { backgroundColor: attendanceRate >= 85 ? palette.successBg : palette.warningBg }]}>
+          <View style={[styles.rateBadgeBox, { backgroundColor: attendanceRate >= 85 ? (isDark ? '#064E3B' : '#ECFDF5') : (isDark ? '#78350F' : '#FFFBEB') }]}>
             <Ionicons
               name={attendanceRate >= 85 ? 'shield-checkmark' : 'alert-circle'}
-              size={36}
+              size={32}
               color={attendanceRate >= 85 ? palette.success : palette.warning}
             />
           </View>
         </View>
       </Card>
 
-      {/* Stats Summary Row (Dynamic) */}
+      {/* 3-Column Metrics Grid */}
       <View style={styles.statsRow}>
-        <StatCard title="Gelinen" value={`${presentCount} Ders`} icon="checkmark-circle" color={palette.success} />
-        <StatCard title="İzinli" value={`${leaveCount} Ders`} icon="information-circle" color={palette.info} />
-        <StatCard title="Devamsız" value={`${absentCount} Ders`} icon="close-circle" color={palette.danger} />
+        {/* Gelinen */}
+        <View style={[styles.statBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <View style={styles.statBoxTop}>
+            <Text style={[styles.statBoxLabel, { color: palette.textSecondary }]}>Gelinen</Text>
+            <View style={[styles.statMiniBadge, { backgroundColor: palette.successBg }]}>
+              <Ionicons name="checkmark" size={11} color={palette.success} />
+            </View>
+          </View>
+          <Text style={[styles.statBoxNumber, { color: palette.text }]}>
+            {presentCount} <Text style={[styles.statBoxUnit, { color: palette.textSecondary }]}>Ders</Text>
+          </Text>
+        </View>
+
+        {/* İzinli */}
+        <View style={[styles.statBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <View style={styles.statBoxTop}>
+            <Text style={[styles.statBoxLabel, { color: palette.textSecondary }]}>İzinli</Text>
+            <View style={[styles.statMiniBadge, { backgroundColor: palette.infoBg }]}>
+              <Ionicons name="information" size={11} color={palette.info} />
+            </View>
+          </View>
+          <Text style={[styles.statBoxNumber, { color: palette.text }]}>
+            {leaveCount} <Text style={[styles.statBoxUnit, { color: palette.textSecondary }]}>Ders</Text>
+          </Text>
+        </View>
+
+        {/* Devamsız */}
+        <View style={[styles.statBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <View style={styles.statBoxTop}>
+            <Text style={[styles.statBoxLabel, { color: palette.textSecondary }]}>Devamsız</Text>
+            <View style={[styles.statMiniBadge, { backgroundColor: palette.dangerBg }]}>
+              <Ionicons name="close" size={11} color={palette.danger} />
+            </View>
+          </View>
+          <Text style={[styles.statBoxNumber, { color: palette.text }]}>
+            {absentCount} <Text style={[styles.statBoxUnit, { color: palette.textSecondary }]}>Ders</Text>
+          </Text>
+        </View>
       </View>
 
-      {/* Filter Chips */}
-      <View style={styles.filterRow}>
-        {(['all', 'Geldi', 'Gelmedi', 'İzinli', 'Geç Kaldı'] as const).map((filter) => {
-          const isSelected = selectedFilter === filter;
-          const label = filter === 'all' ? 'Tümü' : filter;
-          return (
-            <TouchableOpacity
-              key={filter}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: isSelected ? palette.primary : palette.card,
-                  borderColor: isSelected ? palette.primary : palette.border,
-                },
-              ]}
-              onPress={() => setSelectedFilter(filter)}
-            >
-              <Text
+      {/* Filter Chips Horizontal Scroll */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          {(['all', 'Geldi', 'Gelmedi', 'İzinli', 'Geç Kaldı'] as const).map((filter) => {
+            const isSelected = selectedFilter === filter;
+            const label = filter === 'all' ? 'Tümü' : filter;
+            return (
+              <TouchableOpacity
+                key={filter}
                 style={[
-                  styles.filterChipText,
-                  { color: isSelected ? '#FFFFFF' : palette.textSecondary, fontWeight: isSelected ? '700' : '500' },
+                  styles.filterChip,
+                  {
+                    backgroundColor: isSelected ? palette.primary : palette.card,
+                    borderColor: isSelected ? palette.primary : palette.border,
+                  },
                 ]}
+                onPress={() => setSelectedFilter(filter)}
+                activeOpacity={0.8}
               >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: isSelected ? '#FFFFFF' : palette.textSecondary, fontWeight: isSelected ? '700' : '600' },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Attendance History Section */}
-      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 16 }]}>
+      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 14 }]}>
         Yoklama Kayıtları ({filteredRecords.length})
       </Text>
 
       {filteredRecords.length === 0 ? (
         <Card style={[styles.emptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Ionicons name="clipboard-outline" size={40} color={palette.textMuted} />
+          <View style={[styles.emptyIconBox, { backgroundColor: isDark ? '#111C2E' : '#F8FAFC' }]}>
+            <Ionicons name="clipboard-outline" size={32} color={palette.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: palette.text }]}>Kayıt Bulunamadı</Text>
           <Text style={[styles.emptySubtitle, { color: palette.textSecondary }]}>
             {selectedFilter === 'all'
@@ -265,7 +320,7 @@ export default function YoklamaScreen() {
                 <Ionicons name={getStatusIcon(r.status)} size={22} color={getStatusColor(r.status)} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.recordCourse, { color: palette.text }]}>{r.courseName}</Text>
+                <Text style={[styles.recordCourse, { color: palette.text }]} numberOfLines={1}>{r.courseName}</Text>
                 <Text style={[styles.recordDate, { color: palette.textMuted }]}>{r.date}</Text>
                 {r.note ? (
                   <Text style={[styles.recordNote, { color: palette.textSecondary }]}>
@@ -278,6 +333,8 @@ export default function YoklamaScreen() {
           </Card>
         ))
       )}
+          </>
+        )}
       </ScrollView>
 
       {/* QR Attendance Scanner Modal */}
@@ -315,16 +372,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   content: {
-    padding: 20,
+    padding: 18,
   },
   qrHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    shadowColor: '#2C98F6',
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    shadowColor: '#EA580C',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -332,8 +389,8 @@ const styles = StyleSheet.create({
   },
   qrHeaderBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   studentTabsContainer: {
     marginBottom: 14,
@@ -348,17 +405,22 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
   },
   studentTabText: {
     fontSize: 13,
   },
   rateCard: {
-    padding: 16,
-    borderRadius: 18,
+    padding: 18,
+    borderRadius: 22,
     borderWidth: 1,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   rateRow: {
     flexDirection: 'row',
@@ -366,40 +428,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rateLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   rateValue: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '900',
     marginTop: 2,
+    letterSpacing: -0.5,
   },
   rateSub: {
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 3,
   },
   rateBadgeBox: {
     width: 60,
     height: 60,
-    borderRadius: 16,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  /* 3-Column Metrics */
   statsRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 14,
   },
-  filterRow: {
+  statBox: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'space-between',
+  },
+  statBoxTop: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
+  statBoxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statMiniBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statBoxNumber: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  statBoxUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  /* Filters */
+  filterContainer: {
+    marginBottom: 10,
+    marginHorizontal: -18,
+  },
+  filterScrollContent: {
+    paddingHorizontal: 18,
+    gap: 8,
+  },
   filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     borderWidth: 1,
   },
   filterChipText: {
@@ -407,13 +510,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.2,
     marginBottom: 10,
   },
   recordCard: {
     marginBottom: 10,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
   },
   recordRow: {
@@ -421,15 +525,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   recordCourse: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   recordDate: {
     fontSize: 12,
@@ -442,19 +547,30 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
-    borderRadius: 16,
+    padding: 26,
+    borderRadius: 22,
     borderWidth: 1,
     marginTop: 8,
   },
+  emptyIconBox: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    marginTop: 10,
+    fontWeight: '800',
+    marginTop: 4,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280,
   },
 });
+

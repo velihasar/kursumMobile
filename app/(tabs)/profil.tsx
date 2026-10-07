@@ -6,6 +6,7 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
+  Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,17 @@ export default function ProfilScreen() {
   const { palette, isDark, toggleTheme } = useAppTheme();
 
   const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const handleShareApp = async () => {
+    try {
+      await Share.share({
+        message: 'Kursum Mobil uygulamasını keşfedin! Ders programı, yoklama ve kantin bakiyenizi anlık takip edin. 🎓✨',
+        title: 'Kursum Mobil',
+      });
+    } catch {
+      showAlert('Hata', 'Uygulama paylaşılırken bir hata oluştu.', undefined, 'error');
+    }
+  };
 
   const handleLogout = () => {
     showAlert(
@@ -95,11 +107,12 @@ export default function ProfilScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
       >
         {/* User Info Card */}
-        <Card style={styles.profileCard}>
+        <Card style={[styles.profileCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.profileRow}>
             <View style={[styles.avatarBox, { backgroundColor: palette.primaryLight }]}>
-              <Ionicons name="person" size={32} color={palette.primary} />
+              <Ionicons name="person" size={28} color={palette.primary} />
             </View>
+
             <View style={{ flex: 1, marginLeft: 14 }}>
               <Text style={[styles.userName, { color: palette.text }]}>
                 {user?.fullName || 'Kullanıcı'}
@@ -109,31 +122,33 @@ export default function ProfilScreen() {
                   {user.email}
                 </Text>
               ) : null}
-              <Text style={[styles.userRole, { color: palette.primary }]}>
-                {user?.role === 'Parent'
-                  ? 'Veli Hesabı'
-                  : user?.role === 'Teacher'
-                  ? 'Öğretmen Hesabı'
-                  : user?.role === 'Admin'
-                  ? 'Yönetici'
-                  : 'Öğrenci Hesabı'}
-              </Text>
+              <View style={[styles.rolePill, { backgroundColor: palette.primaryLight }]}>
+                <Text style={[styles.rolePillText, { color: palette.primary }]}>
+                  {user?.role === 'Parent'
+                    ? 'Veli Hesabı'
+                    : user?.role === 'Teacher'
+                    ? 'Öğretmen Hesabı'
+                    : user?.role === 'Admin'
+                    ? 'Yönetici'
+                    : 'Öğrenci Hesabı'}
+                </Text>
+              </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.editBadgeBtn, { backgroundColor: palette.primaryLight, borderColor: palette.border }]}
+              style={[styles.editBadgeBtn, { backgroundColor: palette.primaryLight, borderColor: palette.borderLight }]}
               onPress={() => setEditModalVisible(true)}
               activeOpacity={0.7}
             >
-              <Ionicons name="pencil" size={15} color={palette.primary} />
+              <Ionicons name="pencil" size={14} color={palette.primary} />
               <Text style={[styles.editBadgeText, { color: palette.primary }]}>Düzenle</Text>
             </TouchableOpacity>
           </View>
         </Card>
 
         {/* Account & Security Section */}
-        <Text style={[styles.sectionTitle, { color: palette.text }]}>Hesap & Güvenlik</Text>
-        <Card style={styles.settingsCard}>
+        <Text style={[styles.sectionTitle, { color: palette.textSecondary }]}>HESAP & GÜVENLİK</Text>
+        <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <TouchableOpacity
             style={styles.settingActionRow}
             onPress={() => setEditModalVisible(true)}
@@ -141,17 +156,17 @@ export default function ProfilScreen() {
           >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIconBox, { backgroundColor: palette.primaryLight }]}>
-                <Ionicons name="person-circle-outline" size={20} color={palette.primary} />
+                <Ionicons name="person" size={18} color={palette.primary} />
               </View>
               <View>
                 <Text style={[styles.settingLabel, { color: palette.text }]}>Bilgilerimi Düzenle</Text>
                 <Text style={[styles.settingSub, { color: palette.textSecondary }]}>İsim, soyisim ve e-posta güncelle</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={palette.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
           </TouchableOpacity>
 
-          <View style={[styles.innerDivider, { backgroundColor: palette.border }]} />
+          <View style={[styles.innerDivider, { backgroundColor: palette.borderLight }]} />
 
           <TouchableOpacity
             style={styles.settingActionRow}
@@ -159,25 +174,25 @@ export default function ProfilScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#1E293B' : '#FEF3C7' }]}>
-                <Ionicons name="key-outline" size={20} color="#D97706" />
+              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#2D1B0B' : '#FEF3C7' }]}>
+                <Ionicons name="key" size={18} color="#D97706" />
               </View>
               <View>
                 <Text style={[styles.settingLabel, { color: palette.text }]}>Şifre Değiştir</Text>
                 <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Giriş şifrenizi yenileyin</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={palette.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
           </TouchableOpacity>
         </Card>
 
         {/* App Preferences */}
-        <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 16 }]}>Tercihler</Text>
-        <Card style={styles.settingsCard}>
+        <Text style={[styles.sectionTitle, { color: palette.textSecondary, marginTop: 16 }]}>TERCİHLER</Text>
+        <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                <Ionicons name="moon-outline" size={20} color={palette.text} />
+              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#111C2E' : '#F1F5F9' }]}>
+                <Ionicons name="moon" size={18} color={palette.text} />
               </View>
               <Text style={[styles.settingLabel, { color: palette.text }]}>Karanlık Mod</Text>
             </View>
@@ -190,21 +205,42 @@ export default function ProfilScreen() {
         </Card>
 
         {/* App Info Card */}
-        <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 16 }]}>Uygulama Bilgisi</Text>
-        <Card style={styles.settingsCard}>
+        <Text style={[styles.sectionTitle, { color: palette.textSecondary, marginTop: 16 }]}>UYGULAMA BİLGİSİ & DESTEK</Text>
+        <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <TouchableOpacity
+            style={styles.settingActionRow}
+            onPress={handleShareApp}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#2E1A47' : '#F3E8FF' }]}>
+                <Ionicons name="share-social" size={18} color="#9333EA" />
+              </View>
+              <View>
+                <Text style={[styles.settingLabel, { color: palette.text }]}>Uygulamayı Arkadaşınla Paylaş</Text>
+                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Kursum Mobil'i sevdiklerinize önerin</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+          </TouchableOpacity>
+
+          <View style={[styles.innerDivider, { backgroundColor: palette.borderLight }]} />
+
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                <Ionicons name="information-circle-outline" size={20} color={palette.textSecondary} />
+              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#111C2E' : '#F1F5F9' }]}>
+                <Ionicons name="information-circle" size={18} color={palette.primary} />
               </View>
               <Text style={[styles.settingLabel, { color: palette.text }]}>Sürüm</Text>
             </View>
-            <Text style={[styles.settingSub, { color: palette.textMuted }]}>v1.0.0</Text>
+            <View style={[styles.versionPill, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+              <Text style={[styles.versionPillText, { color: palette.textSecondary }]}>v1.0.0</Text>
+            </View>
           </View>
         </Card>
 
         {/* Account Actions */}
-        <View style={{ marginTop: 28, gap: 12, marginBottom: 24 }}>
+        <View style={{ marginTop: 24, gap: 12, marginBottom: 24 }}>
           <Button
             title="Çıkış Yap"
             variant="outline"
@@ -255,56 +291,76 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   content: {
-    padding: 20,
+    padding: 18,
   },
   profileCard: {
     padding: 18,
+    borderRadius: 22,
+    borderWidth: 1,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   userEmail: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
   },
-  userRole: {
-    fontSize: 12,
-    fontWeight: '600',
+  rolePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
     marginTop: 4,
   },
-  sectionTitle: {
-    fontSize: 16,
+  rolePillText: {
+    fontSize: 11,
     fontWeight: '700',
-    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   settingsCard: {
-    padding: 6,
-    marginBottom: 8,
+    padding: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   settingActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -313,32 +369,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   innerDivider: {
     height: 1,
-    marginHorizontal: 12,
-    opacity: 0.5,
+    marginHorizontal: 14,
   },
   settingLabel: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   settingSub: {
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
+  },
+  versionPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  versionPillText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   editBadgeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
     borderWidth: 1,
   },
   editBadgeText: {
@@ -351,12 +415,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
   },
   deleteAccountText: {
     color: '#EF4444',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
 });
+

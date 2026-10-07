@@ -11,6 +11,7 @@ import { fetchInstitutionInfo, InstitutionInfo } from '@/lib/services/institutio
 import { fetchAnnouncements, AnnouncementItem } from '@/lib/services/announcement-service';
 import { fetchEvents, EventItem } from '@/lib/services/event-service';
 import { QrScannerModal } from '@/components/ui/QrScannerModal';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 
 export { EventItem, AnnouncementItem };
@@ -21,6 +22,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { palette, isDark } = useAppTheme();
 
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [students, setStudents] = useState<ChildStudent[]>([]);
   const [institution, setInstitution] = useState<InstitutionInfo | null>(null);
@@ -32,50 +34,54 @@ export default function DashboardScreen() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementItem | null>(null);
 
-  const loadData = async () => {
-    const parentId = user?.parentId;
-    const defaultStudentId = user?.studentId;
+  const loadData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    try {
+      const parentId = user?.parentId;
+      const defaultStudentId = user?.studentId;
 
-    const [sList, inst, annList, evtList] = await Promise.all([
-      fetchParentStudents(parentId, defaultStudentId),
-      fetchInstitutionInfo(user?.tenantId),
-      fetchAnnouncements(user?.tenantId),
-      fetchEvents(user?.tenantId),
-    ]);
+      const [sList, inst, annList, evtList] = await Promise.all([
+        fetchParentStudents(parentId, defaultStudentId),
+        fetchInstitutionInfo(user?.tenantId),
+        fetchAnnouncements(user?.tenantId),
+        fetchEvents(user?.tenantId),
+      ]);
 
-    setStudents(sList);
-    setInstitution(inst);
-    setAnnouncements(annList);
-    setEvents(evtList);
-    setLogoError(false);
+      setStudents(sList);
+      setInstitution(inst);
+      setAnnouncements(annList);
+      setEvents(evtList);
+      setLogoError(false);
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [user?.studentId, user?.parentId, user?.tenantId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await loadData(false);
     setRefreshing(false);
   };
 
   const isParent = user?.role === 'Parent' || (user?.roles?.some((r) => r.toLowerCase().includes('veli') || r.toLowerCase().includes('parent')));
 
   return (
-    <>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: palette.background }}
-        contentContainerStyle={[
-          styles.content,
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      {/* Fixed Top Header with Dual Branding (Kursum Brand + Institution Badge) */}
+      <View
+        style={[
+          styles.fixedHeader,
           {
-            paddingTop: Math.max(insets.top + 12, 32),
-            paddingBottom: 32,
+            paddingTop: Math.max(insets.top + 8, 28),
+            backgroundColor: palette.background,
+            borderBottomColor: palette.border,
           },
         ]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
       >
-        {/* Top Header with Dual Branding (Kursum Brand + Institution Badge) */}
         <View style={styles.topHeader}>
           <View style={styles.brandRow}>
             <View style={[styles.logoBadge, { backgroundColor: palette.primary }]}>
@@ -113,23 +119,40 @@ export default function DashboardScreen() {
             </View>
           ) : null}
         </View>
+      </View>
 
-        {/* Children Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            {isParent && students.length > 1 ? 'Öğrencilerim & Ders Durumları' : 'Öğrenci & Ders Durumu'}
-          </Text>
-          {students.length > 1 && (
-            <Badge label={`${students.length} Öğrenci`} variant="info" />
-          )}
-        </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom: 40,
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
+      >
+        {loading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
+            {/* Children Section */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>
+                {isParent && students.length > 1 ? 'Öğrencilerim & Ders Durumları' : 'Öğrenci & Ders Durumu'}
+              </Text>
+              {students.length > 1 && (
+                <Badge label={`${students.length} Öğrenci`} variant="info" />
+              )}
+            </View>
 
         {/* Individual Child Cards */}
         {students.length === 0 ? (
           <Card style={[styles.childCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <View style={{ alignItems: 'center', padding: 16 }}>
-              <Ionicons name="person-outline" size={32} color={palette.textSecondary} />
-              <Text style={{ color: palette.textSecondary, marginTop: 8, fontSize: 14 }}>
+            <View style={{ alignItems: 'center', padding: 20 }}>
+              <View style={[styles.emptyAvatarBox, { backgroundColor: palette.primaryLight }]}>
+                <Ionicons name="person-outline" size={28} color={palette.primary} />
+              </View>
+              <Text style={{ color: palette.textSecondary, marginTop: 12, fontSize: 13, textAlign: 'center' }}>
                 Kayıtlı öğrenci bilgisi yükleniyor veya atanmış öğrenci bulunmuyor.
               </Text>
             </View>
@@ -137,55 +160,88 @@ export default function DashboardScreen() {
         ) : (
           students.map((st) => (
             <Card key={st.id} style={[styles.childCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-              {/* Child Header */}
+              {/* Child Header with avatar, checkmark & participation badge */}
               <View style={styles.childHeader}>
-                <View style={styles.childAvatarBox}>
-                  <Ionicons name="person" size={20} color={palette.primary} />
+                <View style={styles.avatarWrapper}>
+                  <View style={[styles.childAvatarBox, { backgroundColor: palette.primaryLight }]}>
+                    <Ionicons name="person" size={22} color={palette.primary} />
+                  </View>
+                  <View style={[styles.verifiedCheckDot, { backgroundColor: palette.success }]}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  </View>
                 </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
+
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.childRoleTag, { color: palette.textSecondary }]}>ÖĞRENCİ</Text>
                   <Text style={[styles.childName, { color: palette.text }]}>{st.fullName}</Text>
                 </View>
-                <Badge label={`%${st.attendanceRate ?? 100} Katılım`} variant={st.attendanceRate && st.attendanceRate < 85 ? 'warning' : 'success'} />
+                <Badge
+                  label={`%${st.attendanceRate ?? 100} Katılım`}
+                  variant={st.attendanceRate && st.attendanceRate < 85 ? 'warning' : 'success'}
+                />
               </View>
 
-              {/* Next Lesson Box */}
-              <View style={[styles.nextLessonBox, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: palette.border }]}>
-                <View style={[styles.nextLessonIconBadge, { backgroundColor: palette.accentLight }]}>
-                  <Ionicons name="time" size={18} color={palette.accent} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+              {/* Next Lesson Focus Card */}
+              <TouchableOpacity
+                style={[
+                  styles.nextLessonBox,
+                  {
+                    backgroundColor: isDark ? '#111C2E' : '#F0F5FF',
+                    borderColor: isDark ? '#1E2F48' : '#DBEAFE',
+                  },
+                ]}
+                activeOpacity={0.85}
+                onPress={() => router.push('/(tabs)/dersler')}
+              >
+                <View style={styles.nextLessonTopRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={[styles.nextLessonMiniIcon, { backgroundColor: isDark ? '#2D1A04' : '#FFF7ED' }]}>
+                      <Ionicons name="time" size={14} color={palette.accent} />
+                    </View>
                     <Text style={[styles.nextLessonTag, { color: palette.accent }]}>ÖNÜMÜZDEKİ DERS</Text>
-                    {st.nextLesson?.time && (
-                      <View style={[styles.timeBadge, { backgroundColor: palette.card, borderColor: palette.border }]}>
-                        <Text style={[styles.timeBadgeText, { color: palette.textSecondary }]}>
-                          {st.nextLesson.time}
+                  </View>
+
+                  {st.nextLesson?.time ? (
+                    <View style={[styles.timeBadge, { backgroundColor: palette.accent }]}>
+                      <Text style={styles.timeBadgeText}>
+                        {st.nextLesson.time.toLowerCase().includes('bugün') ? st.nextLesson.time : `Bugün ${st.nextLesson.time}`}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={styles.nextLessonContentRow}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={[styles.nextLessonTitle, { color: palette.text }]} numberOfLines={1}>
+                      {st.nextLesson?.subject || (st.courseCount > 0 ? 'Kayıtlı Dersler' : 'Ders Kaydı Yok')}
+                    </Text>
+                    {(st.nextLesson?.teacher || st.nextLesson?.classroom) ? (
+                      <View style={styles.locationRow}>
+                        <Ionicons name="location-outline" size={13} color={palette.textSecondary} />
+                        <Text style={[styles.nextLessonSub, { color: palette.textSecondary }]} numberOfLines={1}>
+                          {[st.nextLesson.classroom, st.nextLesson.teacher].filter(Boolean).join(' • ')}
                         </Text>
                       </View>
+                    ) : (
+                      <Text style={[styles.nextLessonSub, { color: palette.textSecondary }]}>
+                        {(st.courseCount ?? 0) > 0 ? `${st.courseCount} Aktif Ders Kaydı` : 'Ders programı tanımlanmadı'}
+                      </Text>
                     )}
                   </View>
-                  <Text style={[styles.nextLessonTitle, { color: palette.text }]} numberOfLines={1}>
-                    {st.nextLesson?.subject || (st.courseCount > 0 ? 'Kayıtlı Dersler' : 'Ders Kaydı Yok')}
-                  </Text>
-                  {(st.nextLesson?.teacher || st.nextLesson?.classroom) ? (
-                    <Text style={[styles.nextLessonSub, { color: palette.textSecondary }]} numberOfLines={1}>
-                      {[st.nextLesson.teacher, st.nextLesson.classroom].filter(Boolean).join(' • ')}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.nextLessonSub, { color: palette.textSecondary }]}>
-                      {(st.courseCount ?? 0) > 0 ? `${st.courseCount} Aktif Ders Kaydı` : 'Ders programı tanımlanmadı'}
-                    </Text>
-                  )}
-                </View>
-              </View>
 
-              {/* Child Payment & Installment Box */}
+                  <View style={[styles.nextLessonArrowBtn, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+                    <Ionicons name="arrow-forward" size={16} color={palette.primary} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Child Payment & Canteen Box */}
               <TouchableOpacity
                 style={[
                   styles.childPaymentBox,
                   {
                     backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
-                    borderColor: st.paymentInfo?.hasDebt ? (isDark ? '#451A03' : '#FFEDD5') : palette.border,
+                    borderColor: palette.border,
                   },
                 ]}
                 activeOpacity={0.8}
@@ -199,67 +255,100 @@ export default function DashboardScreen() {
                 >
                   <Ionicons
                     name={st.paymentInfo?.hasDebt ? 'card' : 'checkmark-circle'}
-                    size={16}
+                    size={18}
                     color={st.paymentInfo?.hasDebt ? palette.accent : palette.success}
                   />
                 </View>
 
-                <View style={{ flex: 1, marginLeft: 10 }}>
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={[styles.paymentStatusTitle, { color: palette.text }]}>
-                      {st.paymentInfo?.hasDebt ? 'Sonraki Taksit' : 'Taksit & Ödeme Durumu'}
-                    </Text>
-                    {st.paymentInfo?.hasDebt ? (
-                      <Text style={[styles.paymentAmountText, { color: palette.accent }]}>
-                        ₺{st.paymentInfo.nextPaymentAmount.toFixed(2)}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+                      <Text style={[styles.paymentStatusTitle, { color: palette.text }]} numberOfLines={1}>
+                        {st.paymentInfo?.hasDebt ? 'Sonraki Taksit' : 'Taksit & Ödeme'}
                       </Text>
-                    ) : (
-                      <Badge label="Ödendi" variant="success" />
-                    )}
+                      <Badge
+                        label={st.paymentInfo?.hasDebt ? 'Taksit Var' : 'Ödendi'}
+                        variant={st.paymentInfo?.hasDebt ? 'accent' : 'success'}
+                      />
+                    </View>
+
+                    {st.paymentInfo?.balance !== undefined ? (
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.canteenLabelText, { color: palette.textSecondary }]}>Kantin Bakiye</Text>
+                        <Text style={[styles.canteenAmountText, { color: palette.primary }]}>
+                          ₺{st.paymentInfo.balance.toFixed(2)}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                    <Text style={[styles.paymentDateSub, { color: palette.textSecondary }]}>
-                      {st.paymentInfo?.hasDebt
-                        ? `Son Ödeme: ${st.paymentInfo.nextPaymentDate}`
-                        : 'Tüm ödemeler güncel • Borç yok'}
-                    </Text>
-                    {st.paymentInfo?.balance !== undefined && (
-                      <Text style={[styles.canteenBalSub, { color: palette.textMuted }]}>
-                        Kantin: ₺{st.paymentInfo.balance.toFixed(2)}
-                      </Text>
-                    )}
-                  </View>
+                  <Text style={[styles.paymentDateSub, { color: palette.textSecondary }]} numberOfLines={1}>
+                    {st.paymentInfo?.hasDebt
+                      ? `Son Ödeme: ${st.paymentInfo.nextPaymentDate}`
+                      : 'Tüm ödemeler güncel • Borç yok'}
+                  </Text>
                 </View>
               </TouchableOpacity>
 
-              {/* Action Quick Links for this Child */}
-              <View style={styles.childActionsRow}>
+              {/* 3-Grid Quick Action Cards (QR Giriş, Program, Yoklama) */}
+              <View style={styles.quickActionGrid}>
+                {/* 1. QR Giriş */}
                 <TouchableOpacity
-                  style={[styles.childActionBtn, { borderColor: palette.accent, backgroundColor: palette.accentLight }]}
+                  style={[
+                    styles.quickActionCard,
+                    {
+                      backgroundColor: isDark ? '#2D1B0B' : '#FFF7ED',
+                      borderColor: isDark ? '#451A03' : '#FFEDD5',
+                    },
+                  ]}
+                  activeOpacity={0.75}
                   onPress={() => {
                     setActiveQrStudentId(st.id);
                     setQrModalVisible(true);
                   }}
                 >
-                  <Ionicons name="qr-code" size={15} color={palette.accent} />
-                  <Text style={[styles.childActionText, { color: palette.accent }]}>QR Giriş</Text>
+                  <View style={[styles.quickActionIconBox, { backgroundColor: isDark ? '#3D2406' : '#FFEDD5' }]}>
+                    <Ionicons name="qr-code" size={18} color={palette.accent} />
+                  </View>
+                  <Text style={[styles.quickActionLabel, { color: palette.text }]}>QR Giriş</Text>
                 </TouchableOpacity>
 
+                {/* 2. Program */}
                 <TouchableOpacity
-                  style={[styles.childActionBtn, { borderColor: palette.border }]}
+                  style={[
+                    styles.quickActionCard,
+                    {
+                      backgroundColor: isDark ? '#111C2E' : '#EEF2FF',
+                      borderColor: isDark ? '#1E2F48' : '#E0E7FF',
+                    },
+                  ]}
+                  activeOpacity={0.75}
                   onPress={() => router.push('/(tabs)/dersler')}
                 >
-                  <Ionicons name="calendar-outline" size={15} color={palette.textSecondary} />
-                  <Text style={[styles.childActionText, { color: palette.text }]}>Program ({st.courseCount ?? 0})</Text>
+                  <View style={[styles.quickActionIconBox, { backgroundColor: isDark ? '#1E293B' : '#E0E7FF' }]}>
+                    <Ionicons name="calendar" size={18} color={palette.primary} />
+                  </View>
+                  <Text style={[styles.quickActionLabel, { color: palette.text }]}>
+                    Program({st.courseCount ?? 0})
+                  </Text>
                 </TouchableOpacity>
 
+                {/* 3. Yoklama */}
                 <TouchableOpacity
-                  style={[styles.childActionBtn, { borderColor: palette.border }]}
+                  style={[
+                    styles.quickActionCard,
+                    {
+                      backgroundColor: isDark ? '#063B28' : '#ECFDF5',
+                      borderColor: isDark ? '#065F46' : '#D1FAE5',
+                    },
+                  ]}
+                  activeOpacity={0.75}
                   onPress={() => router.push('/(tabs)/yoklama')}
                 >
-                  <Ionicons name="checkmark-done-circle-outline" size={15} color={palette.success} />
-                  <Text style={[styles.childActionText, { color: palette.text }]}>Yoklama</Text>
+                  <View style={[styles.quickActionIconBox, { backgroundColor: isDark ? '#064E3B' : '#D1FAE5' }]}>
+                    <Ionicons name="checkbox" size={18} color={palette.success} />
+                  </View>
+                  <Text style={[styles.quickActionLabel, { color: palette.text }]}>Yoklama</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -344,9 +433,14 @@ export default function DashboardScreen() {
 
         {announcements.length === 0 ? (
           <Card style={[styles.emptySectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <Ionicons name="megaphone-outline" size={24} color={palette.textSecondary} />
+            <View style={[styles.emptyAnnouncementIconBox, { backgroundColor: palette.primaryLight }]}>
+              <Ionicons name="megaphone-outline" size={24} color={palette.primary} />
+            </View>
+            <Text style={[styles.emptySectionTitle, { color: palette.text }]}>
+              Her Şey Güncel!
+            </Text>
             <Text style={[styles.emptySectionText, { color: palette.textSecondary }]}>
-              Yayınlanmış aktif duyuru bulunmuyor.
+              Yayınlanmış aktif bir duyuru bulunmuyor. Yeni bir haber olduğunda burada göreceksiniz.
             </Text>
           </Card>
         ) : (
@@ -397,6 +491,8 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        )}
+          </>
         )}
       </ScrollView>
 
@@ -516,56 +612,59 @@ export default function DashboardScreen() {
         initialStudentId={activeQrStudentId}
         onSuccess={loadData}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fixedHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
   content: {
-    padding: 20,
-    paddingTop: 50,
+    padding: 18,
   },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   logoBadge: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2C98F6',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
   },
   brandTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginLeft: 8,
   },
   institutionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
-    maxWidth: '52%',
+    maxWidth: '54%',
     gap: 6,
   },
   instMiniLogo: {
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 16,
     borderRadius: 4,
   },
   institutionBadgeText: {
@@ -580,124 +679,142 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   childCard: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     marginBottom: 14,
   },
   childHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  avatarWrapper: {
+    position: 'relative',
   },
   childAvatarBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(44, 152, 246, 0.12)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  verifiedCheckDot: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  emptyAvatarBox: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  childRoleTag: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   childName: {
     fontSize: 16,
     fontWeight: '800',
+    marginTop: 1,
   },
-  childGrade: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+
+  /* Next Lesson */
   nextLessonBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 12,
   },
-  nextLessonIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  nextLessonTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  nextLessonMiniIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   nextLessonTag: {
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   timeBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
   timeBadgeText: {
+    color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
-  },
-  nextLessonTitle: {
-    fontSize: 14,
     fontWeight: '800',
-    marginTop: 2,
   },
-  nextLessonSub: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  childActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  childActionBtn: {
-    flex: 1,
+  nextLessonContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    borderWidth: 1,
+    justifyContent: 'space-between',
   },
-  childActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  announcementRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  announcementTitle: {
+  nextLessonTitle: {
     fontSize: 15,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
-  announcementDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
   },
-  announcementDate: {
-    fontSize: 11,
-    marginTop: 6,
+  nextLessonSub: {
+    fontSize: 12,
+    fontWeight: '500',
   },
+  nextLessonArrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  /* Child Payment Box */
   childPaymentBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 11,
-    borderRadius: 13,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 12,
   },
   childPaymentIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -705,33 +822,78 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  paymentAmountText: {
-    fontSize: 13,
+  canteenLabelText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  canteenAmountText: {
+    fontSize: 14,
     fontWeight: '900',
+    letterSpacing: -0.2,
   },
   paymentDateSub: {
     fontSize: 11,
     fontWeight: '500',
+    marginTop: 2,
   },
-  canteenBalSub: {
+
+  /* 3-Grid Quick Action Cards */
+  quickActionGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickActionCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+  },
+  quickActionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   /* Empty Cards */
   emptySectionCard: {
-    padding: 18,
-    borderRadius: 14,
+    padding: 24,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     marginVertical: 4,
   },
+  emptyAnnouncementIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  emptySectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
   emptySectionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280,
   },
 
   /* Events Styles */
@@ -741,9 +903,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   eventCard: {
-    width: 260,
+    width: 270,
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     justifyContent: 'space-between',
   },
@@ -754,20 +916,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventDateBox: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
-    minWidth: 48,
+    minWidth: 50,
   },
   eventDayNumber: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
   },
   eventMonthName: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '900',
     letterSpacing: 0.5,
   },
   eventTitle: {
@@ -795,7 +957,7 @@ const styles = StyleSheet.create({
   },
   announcementCard: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
   },
   announcementHeaderRow: {
@@ -810,7 +972,7 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingVertical: 2,
     paddingHorizontal: 7,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   importantPillText: {
     fontSize: 10,
@@ -819,6 +981,11 @@ const styles = StyleSheet.create({
   announcementDateText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  announcementTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 2,
   },
   announcementSummary: {
     fontSize: 13,
@@ -832,7 +999,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.15)',
+    borderTopColor: 'rgba(150, 150, 150, 0.12)',
   },
   announcementAuthor: {
     fontSize: 11,
@@ -854,8 +1021,8 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 420,
-    borderRadius: 22,
-    padding: 20,
+    borderRadius: 24,
+    padding: 22,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -870,9 +1037,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalCloseBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -887,8 +1054,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   modalMetaBox: {
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
     gap: 8,
     marginVertical: 12,
@@ -912,8 +1079,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   modalActionBtn: {
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -923,3 +1090,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+

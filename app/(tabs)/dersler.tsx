@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { showToast } from '@/components/ui/TopToast';
+import { showAlert } from '@/components/ui/CustomAlert';
 import { fetchCourses, fetchBranches, Course, Branch } from '@/lib/services/course-service';
 import { fetchParentStudents, ChildStudent } from '@/lib/services/student-service';
+import { addCourseScheduleToDeviceCalendar, DayScheduleInfo } from '@/lib/services/calendar-service';
+import { CoursesSkeleton } from '@/components/ui/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 
-interface DayScheduleInfo {
-  dayIndex: number; // 0: Paz, 1: Pzt, 2: Sal, 3: Çar, 4: Per, 5: Cum, 6: Cmt
-  dayName: string;
-  dayShort: string;
-  timeRange: string;
-  isToday: boolean;
-}
+export { DayScheduleInfo };
 
 const TURKISH_DAYS_MAP: { id: number; name: string; short: string }[] = [
   { id: 1, name: 'Pazartesi', short: 'Pzt' },
@@ -59,49 +57,78 @@ export default function DerslerScreen() {
   const { user } = useAuth();
   const { palette, isDark } = useAppTheme();
 
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [students, setStudents] = useState<ChildStudent[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>();
+  const [savingCalendarCourseId, setSavingCalendarCourseId] = useState<number | string | null>(null);
 
   const todayDayIndex = new Date().getDay();
 
-  const loadData = async () => {
-    const parentId = user?.parentId;
-    const defaultStudentId = user?.studentId;
+  const loadData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    try {
+      const parentId = user?.parentId;
+      const defaultStudentId = user?.studentId;
 
-    const [sList, bList] = await Promise.all([
-      fetchParentStudents(parentId, defaultStudentId),
-      fetchBranches(user?.tenantId),
-    ]);
+      const [sList, bList] = await Promise.all([
+        fetchParentStudents(parentId, defaultStudentId),
+        fetchBranches(user?.tenantId),
+      ]);
 
-    setStudents(sList);
-    setBranches(bList);
+      setStudents(sList);
+      setBranches(bList);
 
-    const activeId = selectedStudentId || sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined);
-    if (activeId && !selectedStudentId) {
-      setSelectedStudentId(activeId);
+      const activeId = selectedStudentId || sList[0]?.id || (defaultStudentId ? Number(defaultStudentId) : undefined);
+      if (activeId && !selectedStudentId) {
+        setSelectedStudentId(activeId);
+      }
+
+      const cList = await fetchCourses(activeId);
+      setCourses(cList);
+    } finally {
+      if (isInitial) setLoading(false);
     }
-
-    const cList = await fetchCourses(activeId);
-    setCourses(cList);
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [user?.studentId, user?.parentId, user?.tenantId]);
 
   const handleSelectStudent = async (sId: number) => {
     setSelectedStudentId(sId);
+    setRefreshing(true);
     const cList = await fetchCourses(sId);
     setCourses(cList);
+    setRefreshing(false);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await loadData(false);
     setRefreshing(false);
+  };
+
+  const handleAddToCalendar = async (course: Course, courseIndex: number) => {
+    try {
+      const activeIdentifier = course.id || courseIndex;
+      setSavingCalendarCourseId(activeIdentifier);
+      const schedules = getCourseSchedules(course, courseIndex);
+      const branch = branches.find((b) => b.courseId === course.id || b.name === course.branchName);
+      const res = await addCourseScheduleToDeviceCalendar(course, schedules, branch);
+
+      if (res.success) {
+        showToast('Takvime Eklendi', res.message, 'success');
+      } else {
+        showAlert('Takvim Bildirimi', res.message, undefined, 'warning');
+      }
+    } catch {
+      showAlert('Hata', 'Ders takvime eklenirken beklenmeyen bir hata oluştu.', undefined, 'error');
+    } finally {
+      setSavingCalendarCourseId(null);
+    }
   };
 
   // Helper to get formatted day schedules for a specific course
@@ -159,9 +186,13 @@ export default function DerslerScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.primary} />}
       >
-        {/* Student Selector (If multiple students exist) */}
-        {students.length > 1 && (
-          <View style={styles.studentSelector}>
+        {loading ? (
+          <CoursesSkeleton />
+        ) : (
+          <>
+            {/* Student Selector (If multiple students exist) */}
+            {students.length > 1 && (
+              <View style={styles.studentSelector}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {students.map((st) => {
               const isSelected = st.id === selectedStudentId;
@@ -231,47 +262,43 @@ export default function DerslerScreen() {
               {/* Course Top Info */}
               <View style={styles.cardTopRow}>
                 <View style={[styles.courseIconBox, { backgroundColor: palette.primaryLight }]}>
-                  <Ionicons name="book" size={22} color={palette.primary} />
+                  <Ionicons name="book" size={20} color={palette.primary} />
                 </View>
 
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.courseTitle, { color: palette.text }]}>{course.name}</Text>
                   <Text style={[styles.courseSub, { color: palette.textSecondary }]}>
-                    {course.branchName || branch?.name || 'Genel Şube'} {branch?.classroom ? `• ${branch.classroom}` : ''}
+                    • {course.branchName || branch?.name || 'Genel Şube'} {branch?.classroom ? `• ${branch.classroom}` : ''}
                   </Text>
                 </View>
 
                 {hasLessonToday ? (
                   <Badge label="BUGÜN DERS VAR" variant="accent" />
                 ) : (
-                  <Badge label={`${schedules.length} Gün / Hf.`} variant="primary" />
+                  <Badge label={`${schedules.length} Oturum`} variant="primary" />
                 )}
               </View>
 
-              {/* Teacher & Info Row */}
-              <View style={[styles.metaRow, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: palette.border }]}>
+              {/* Teacher Info Row */}
+              <View style={[styles.metaRow, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: palette.borderLight }]}>
                 <View style={styles.metaItem}>
                   <Ionicons name="person-outline" size={14} color={palette.textSecondary} />
                   <Text style={[styles.metaText, { color: palette.text }]} numberOfLines={1}>
                     {course.teacherName || branch?.teacherName || 'Ders Eğitmeni'}
                   </Text>
                 </View>
-
-                {course.code && (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="pricetag-outline" size={14} color={palette.textSecondary} />
-                    <Text style={[styles.metaText, { color: palette.textMuted }]}>
-                      {course.code}
-                    </Text>
-                  </View>
-                )}
               </View>
 
               {/* Course Days Schedule Section */}
               <View style={styles.scheduleSection}>
-                <Text style={[styles.scheduleSectionTitle, { color: palette.textSecondary }]}>
-                  HAFTALIK DERS GÜNLERİ VE SAATLERİ
-                </Text>
+                <View style={styles.scheduleHeaderRow}>
+                  <Text style={[styles.scheduleSectionTitle, { color: palette.textSecondary }]}>
+                    HAFTALIK DERS GÜNLERİ VE SAATLERİ
+                  </Text>
+                  <Text style={[styles.scheduleCountBadge, { color: palette.textMuted }]}>
+                    {schedules.length} Oturum
+                  </Text>
+                </View>
 
                 <View style={styles.scheduleList}>
                   {schedules.map((sch, sIdx) => (
@@ -281,9 +308,10 @@ export default function DerslerScreen() {
                         styles.scheduleRow,
                         {
                           backgroundColor: sch.isToday
-                            ? (isDark ? 'rgba(255, 138, 0, 0.16)' : palette.accentBg)
-                            : (isDark ? '#1E293B' : '#FFFFFF'),
-                          borderColor: sch.isToday ? palette.accent : palette.border,
+                            ? (isDark ? '#2D1B0B' : '#FFFDF7')
+                            : (isDark ? '#111C2E' : '#F8FAFC'),
+                          borderColor: sch.isToday ? palette.accent : (isDark ? '#1E2F48' : '#F1F5F9'),
+                          borderWidth: sch.isToday ? 1.5 : 1,
                         },
                       ]}
                     >
@@ -312,7 +340,7 @@ export default function DerslerScreen() {
                       <View style={styles.scheduleTimeBox}>
                         <Ionicons
                           name="time-outline"
-                          size={13}
+                          size={14}
                           color={sch.isToday ? palette.accent : palette.textSecondary}
                         />
                         <Text
@@ -338,10 +366,37 @@ export default function DerslerScreen() {
                   ))}
                 </View>
               </View>
+
+              {/* Dynamic Action: Takvime Ekle */}
+              <View style={styles.courseActionsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.courseActionBtn,
+                    {
+                      backgroundColor: isDark ? '#111C2E' : '#FFFFFF',
+                      borderColor: palette.primary,
+                    },
+                  ]}
+                  onPress={() => handleAddToCalendar(course, idx)}
+                  activeOpacity={0.75}
+                  disabled={savingCalendarCourseId === (course.id || idx)}
+                >
+                  {savingCalendarCourseId === (course.id || idx) ? (
+                    <ActivityIndicator size="small" color={palette.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="calendar-outline" size={16} color={palette.primary} />
+                      <Text style={[styles.courseActionBtnText, { color: palette.primary }]}>Takvime Ekle</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </Card>
           );
         })
       )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -364,7 +419,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   content: {
-    padding: 20,
+    padding: 18,
   },
   studentSelector: {
     marginBottom: 16,
@@ -384,13 +439,13 @@ const styles = StyleSheet.create({
   },
   courseCard: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    marginBottom: 14,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     elevation: 2,
   },
   cardTopRow: {
@@ -401,13 +456,14 @@ const styles = StyleSheet.create({
   courseIconBox: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   courseTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
+    letterSpacing: -0.2,
   },
   courseSub: {
     fontSize: 12,
@@ -418,9 +474,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 14,
   },
@@ -432,28 +488,40 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  metaCodeText: {
+    fontSize: 11,
     fontWeight: '600',
   },
   scheduleSection: {
     marginTop: 2,
   },
+  scheduleHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   scheduleSectionTitle: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.6,
-    marginBottom: 8,
+  },
+  scheduleCountBadge: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   scheduleList: {
-    gap: 6,
+    gap: 8,
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
   },
   scheduleDayBox: {
     flexDirection: 'row',
@@ -462,9 +530,9 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   scheduleDayDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   scheduleDayName: {
     fontSize: 13,
@@ -478,19 +546,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   todayMiniBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   todayMiniText: {
     color: '#FFFFFF',
     fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  courseActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150, 150, 150, 0.12)',
+  },
+  courseActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  courseActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyCard: {
     padding: 24,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -516,3 +606,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
