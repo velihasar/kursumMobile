@@ -23,13 +23,14 @@ interface ProfileEditModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialTab?: 'info' | 'password';
 }
 
-export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditModalProps) {
+export function ProfileEditModal({ visible, onClose, onSuccess, initialTab = 'info' }: ProfileEditModalProps) {
   const { palette, isDark } = useAppTheme();
   const { user, updateUserSession } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'info' | 'password'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'password'>(initialTab);
 
   // Info fields
   const [firstName, setFirstName] = useState('');
@@ -44,14 +45,25 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
 
   const [loading, setLoading] = useState(false);
 
+  const formatTitleCase = (str: string) =>
+    str
+      .trim()
+      .split(/\s+/)
+      .map((w) => (w ? w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1).toLocaleLowerCase('tr-TR') : ''))
+      .join(' ');
+
   useEffect(() => {
     if (visible && user) {
-      const parts = (user.fullName || '').trim().split(' ');
+      setActiveTab(initialTab);
+      const cleanName = (user.fullName || '').trim();
+      const parts = cleanName.split(/\s+/).filter(Boolean);
       if (parts.length > 1) {
-        setLastName(parts.pop() || '');
-        setFirstName(parts.join(' '));
+        const rawLast = parts.pop() || '';
+        const rawFirst = parts.join(' ');
+        setLastName(formatTitleCase(rawLast));
+        setFirstName(formatTitleCase(rawFirst));
       } else {
-        setFirstName(user.fullName || '');
+        setFirstName(formatTitleCase(cleanName));
         setLastName('');
       }
       setEmail(user.email || '');
@@ -61,7 +73,7 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
       setNewPasswordConfirm('');
       setLoading(false);
     }
-  }, [visible, user]);
+  }, [visible, user, initialTab]);
 
   const handleSaveInfo = async () => {
     if (!firstName.trim()) {
@@ -71,15 +83,25 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
 
     setLoading(true);
     try {
+      const formatTitleCase = (str: string) =>
+        str
+          .trim()
+          .split(/\s+/)
+          .map((w) => w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1).toLocaleLowerCase('tr-TR'))
+          .join(' ');
+
+      const cleanFirstName = formatTitleCase(firstName);
+      const cleanLastName = formatTitleCase(lastName);
+
       const res = await updateProfileApi({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
         email: email.trim(),
         phoneNumber: phoneNumber.trim(),
       });
 
       if (res.success) {
-        const updatedFullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+        const updatedFullName = `${cleanFirstName} ${cleanLastName}`.trim();
         await updateUserSession({
           fullName: updatedFullName,
           email: email.trim() || user?.email,
@@ -228,6 +250,7 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
                         placeholder="Adınız"
                         value={firstName}
                         onChangeText={setFirstName}
+                        autoCapitalize="words"
                         icon="person-outline"
                       />
                     </View>
@@ -237,6 +260,7 @@ export function ProfileEditModal({ visible, onClose, onSuccess }: ProfileEditMod
                         placeholder="Soyadınız"
                         value={lastName}
                         onChangeText={setLastName}
+                        autoCapitalize="words"
                       />
                     </View>
                   </View>

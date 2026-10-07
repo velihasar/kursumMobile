@@ -26,6 +26,30 @@ export default function ProfilScreen() {
   const { palette, isDark, toggleTheme } = useAppTheme();
 
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editModalTab, setEditModalTab] = useState<'info' | 'password'>('info');
+
+  const getInitials = (name?: string) => {
+    if (!name || name.trim() === '') return 'K';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toLocaleUpperCase('tr-TR');
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toLocaleUpperCase('tr-TR');
+  };
+
+  const formatFullName = (name?: string) => {
+    if (!name || name.trim() === '') return 'Kullanıcı';
+    return name
+      .trim()
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1).toLocaleLowerCase('tr-TR'))
+      .join(' ');
+  };
+
+  const openEditModal = (tab: 'info' | 'password') => {
+    setEditModalTab(tab);
+    setEditModalVisible(true);
+  };
 
   const handleShareApp = async () => {
     try {
@@ -110,39 +134,21 @@ export default function ProfilScreen() {
         <Card style={[styles.profileCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <View style={styles.profileRow}>
             <View style={[styles.avatarBox, { backgroundColor: palette.primaryLight }]}>
-              <Ionicons name="person" size={28} color={palette.primary} />
+              <Text style={[styles.avatarInitials, { color: palette.primary }]}>
+                {getInitials(user?.fullName)}
+              </Text>
             </View>
 
             <View style={{ flex: 1, marginLeft: 14 }}>
               <Text style={[styles.userName, { color: palette.text }]}>
-                {user?.fullName || 'Kullanıcı'}
+                {formatFullName(user?.fullName)}
               </Text>
               {user?.email ? (
                 <Text style={[styles.userEmail, { color: palette.textSecondary }]}>
                   {user.email}
                 </Text>
               ) : null}
-              <View style={[styles.rolePill, { backgroundColor: palette.primaryLight }]}>
-                <Text style={[styles.rolePillText, { color: palette.primary }]}>
-                  {user?.role === 'Parent'
-                    ? 'Veli Hesabı'
-                    : user?.role === 'Teacher'
-                    ? 'Öğretmen Hesabı'
-                    : user?.role === 'Admin'
-                    ? 'Yönetici'
-                    : 'Öğrenci Hesabı'}
-                </Text>
-              </View>
             </View>
-
-            <TouchableOpacity
-              style={[styles.editBadgeBtn, { backgroundColor: palette.primaryLight, borderColor: palette.borderLight }]}
-              onPress={() => setEditModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="pencil" size={14} color={palette.primary} />
-              <Text style={[styles.editBadgeText, { color: palette.primary }]}>Düzenle</Text>
-            </TouchableOpacity>
           </View>
         </Card>
 
@@ -151,16 +157,16 @@ export default function ProfilScreen() {
         <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <TouchableOpacity
             style={styles.settingActionRow}
-            onPress={() => setEditModalVisible(true)}
+            onPress={() => openEditModal('info')}
             activeOpacity={0.7}
           >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIconBox, { backgroundColor: palette.primaryLight }]}>
-                <Ionicons name="person" size={18} color={palette.primary} />
+                <Ionicons name="person-outline" size={18} color={palette.primary} />
               </View>
               <View>
-                <Text style={[styles.settingLabel, { color: palette.text }]}>Bilgilerimi Düzenle</Text>
-                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>İsim, soyisim ve e-posta güncelle</Text>
+                <Text style={[styles.settingLabel, { color: palette.text }]}>Kişisel Bilgilerim</Text>
+                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Ad, soyad ve e-posta bilgilerini düzenle</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
@@ -170,16 +176,16 @@ export default function ProfilScreen() {
 
           <TouchableOpacity
             style={styles.settingActionRow}
-            onPress={() => setEditModalVisible(true)}
+            onPress={() => openEditModal('password')}
             activeOpacity={0.7}
           >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#2D1B0B' : '#FEF3C7' }]}>
-                <Ionicons name="key" size={18} color="#D97706" />
+                <Ionicons name="key-outline" size={18} color="#D97706" />
               </View>
               <View>
                 <Text style={[styles.settingLabel, { color: palette.text }]}>Şifre Değiştir</Text>
-                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Giriş şifrenizi yenileyin</Text>
+                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Giriş şifrenizi ve hesap güvenliğini yönetin</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
@@ -263,11 +269,21 @@ export default function ProfilScreen() {
             <Text style={styles.deleteAccountText}>Hesabımı Sil</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Masavtech Attribution Footer */}
+        <View style={styles.attributionFooter}>
+          <Text style={[styles.attributionLine, { color: palette.textSecondary }]}>
+            <Text style={[styles.attributionBrand, { color: palette.primary }]}>MASAVTECH</Text>
+            {' HİZMETİDİR • '}
+            {new Date().getFullYear()}
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Edit Profile & Change Password Modal */}
       <ProfileEditModal
         visible={editModalVisible}
+        initialTab={editModalTab}
         onClose={() => setEditModalVisible(false)}
       />
     </View>
@@ -309,11 +325,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarInitials: {
+    fontSize: 19,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   userName: {
     fontSize: 17,
@@ -323,17 +344,6 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     marginTop: 2,
-  },
-  rolePill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  rolePillText: {
-    fontSize: 11,
-    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 11,
@@ -396,19 +406,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  editBadgeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  editBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
   deleteAccountBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,6 +419,20 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 14,
     fontWeight: '700',
+  },
+  attributionFooter: {
+    marginTop: 8,
+    marginBottom: 20,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  attributionLine: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+  },
+  attributionBrand: {
+    fontWeight: '800',
   },
 });
 

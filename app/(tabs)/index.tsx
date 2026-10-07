@@ -84,9 +84,11 @@ export default function DashboardScreen() {
       >
         <View style={styles.topHeader}>
           <View style={styles.brandRow}>
-            <View style={[styles.logoBadge, { backgroundColor: palette.primary }]}>
-              <Ionicons name="school" size={20} color="#FFFFFF" />
-            </View>
+            <Image
+              source={require('@/assets/images/screen.png')}
+              style={styles.brandLogoImg}
+              resizeMode="contain"
+            />
             <Text style={[styles.brandTitle, { color: palette.text }]}>KURSUM</Text>
           </View>
 
@@ -634,17 +636,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+  brandLogoImg: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
   },
   brandTitle: {
     fontSize: 18,

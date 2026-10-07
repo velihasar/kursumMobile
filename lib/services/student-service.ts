@@ -137,46 +137,48 @@ function calculateNextLesson(courses: Course[]) {
 
 export async function fetchParentStudents(parentId?: number | string, defaultStudentId?: number | string): Promise<ChildStudent[]> {
   try {
-    const res = await apiClient.get('/api/StudentParents/getall');
-    const allStudentParents = res.data?.data || res.data || [];
+    if (parentId) {
+      const res = await apiClient.get(`/api/StudentParents/getall?parentId=${parentId}`);
+      const allStudentParents = res.data?.data || res.data || [];
 
-    let matched = Array.isArray(allStudentParents)
-      ? allStudentParents.filter((sp: any) => !parentId || sp.parentId == parentId)
-      : [];
+      const matched = Array.isArray(allStudentParents)
+        ? allStudentParents.filter((sp: any) => String(sp.parentId) === String(parentId))
+        : [];
 
-    if (matched.length > 0) {
-      const students: ChildStudent[] = await Promise.all(
-        matched.map(async (sp: any) => {
-          const sId = sp.studentId;
-          const [courses, attendances, wallet] = await Promise.all([
-            fetchCourses(sId),
-            fetchAttendances(sId),
-            fetchWalletInfo(sId),
-          ]);
+      if (matched.length > 0) {
+        const students: ChildStudent[] = await Promise.all(
+          matched.map(async (sp: any) => {
+            const sId = sp.studentId;
+            const [courses, attendances, wallet] = await Promise.all([
+              fetchCourses(sId),
+              fetchAttendances(sId),
+              fetchWalletInfo(sId),
+            ]);
 
-          const present = attendances.filter((a) => a.status === 'Geldi').length;
-          const rate = attendances.length > 0 ? Math.round((present / attendances.length) * 100) : 100;
+            const present = attendances.filter((a) => a.status === 'Geldi').length;
+            const rate = attendances.length > 0 ? Math.round((present / attendances.length) * 100) : 100;
 
-          return {
-            id: sId,
-            fullName: sp.studentName || 'Öğrenci',
-            schoolNumber: sp.studentNumber || undefined,
-            gradeLevel: undefined,
-            branchName: sp.branchName || undefined,
-            courseCount: courses.length,
-            attendanceRate: attendances.length > 0 ? rate : 100,
-            nextLesson: calculateNextLesson(courses),
-            paymentInfo: {
-              balance: wallet.balance,
-              nextPaymentAmount: wallet.nextPaymentAmount,
-              nextPaymentDate: wallet.nextPaymentDate,
-              totalDebt: wallet.totalDebt,
-              hasDebt: (wallet.nextPaymentAmount > 0 || wallet.totalDebt > 0),
-            },
-          };
-        })
-      );
-      return students;
+            return {
+              id: sId,
+              fullName: sp.studentName || 'Öğrenci',
+              schoolNumber: sp.studentNumber || undefined,
+              gradeLevel: undefined,
+              branchName: sp.branchName || undefined,
+              courseCount: courses.length,
+              attendanceRate: attendances.length > 0 ? rate : 100,
+              nextLesson: calculateNextLesson(courses),
+              paymentInfo: {
+                balance: wallet.balance,
+                nextPaymentAmount: wallet.nextPaymentAmount,
+                nextPaymentDate: wallet.nextPaymentDate,
+                totalDebt: wallet.totalDebt,
+                hasDebt: (wallet.nextPaymentAmount > 0 || wallet.totalDebt > 0),
+              },
+            };
+          })
+        );
+        return students;
+      }
     }
 
     if (defaultStudentId) {

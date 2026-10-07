@@ -208,6 +208,15 @@ export default function RegisterScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Masavtech Attribution Footer */}
+        <View style={styles.attributionFooter}>
+          <Text style={[styles.attributionLine, { color: palette.textSecondary }]}>
+            <Text style={[styles.attributionBrand, { color: palette.primary }]}>MASAVTECH</Text>
+            {' HİZMETİDİR • '}
+            {new Date().getFullYear()}
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -273,5 +282,18 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
+  },
+  attributionFooter: {
+    marginTop: 24,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  attributionLine: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+  },
+  attributionBrand: {
+    fontWeight: '800',
   },
 });

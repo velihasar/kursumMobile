@@ -90,10 +90,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         primaryRole = 'Admin';
       }
 
+      // Extract full name from various JWT claim keys (.NET Identity claim formats)
+      const tokenFullName =
+        decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+        decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/name'] ||
+        decoded.unique_name ||
+        decoded.name ||
+        decoded.fullName ||
+        decoded.FullName ||
+        decoded.given_name;
+
+      const fullName =
+        (storedUser?.fullName && storedUser?.fullName !== 'Kullanıcı' ? storedUser.fullName : undefined) ||
+        (storedUser?.name && storedUser?.name !== 'Kullanıcı' ? storedUser.name : undefined) ||
+        tokenFullName ||
+        'Kullanıcı';
+
+      const email =
+        storedUser?.email ||
+        decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+        decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/emailaddress'] ||
+        decoded.email ||
+        '';
+
+      const userId =
+        decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
+        decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/nameidentifier'] ||
+        decoded.nameid ||
+        decoded.sub ||
+        storedUser?.userId ||
+        '1';
+
       return {
-        userId: decoded.nameid || decoded.sub || storedUser?.userId || '1',
-        email: decoded.email || storedUser?.email || '',
-        fullName: decoded.name || storedUser?.fullName || storedUser?.name || 'Kullanıcı',
+        userId,
+        email,
+        fullName,
         roles: roles.length ? roles : [primaryRole],
         role: primaryRole,
         tenantId: tenantId || 1,

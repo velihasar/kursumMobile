@@ -112,7 +112,7 @@ export async function fetchWalletInfo(studentId?: string | number): Promise<Wall
 
       // 2. Fetch Installment Payments (Tahsilatlar)
       try {
-        const paymentsRes = await apiClient.get('/api/Payments/getall');
+        const paymentsRes = await apiClient.get(`/api/Payments/getall?studentId=${studentId}`);
         const allPayments = paymentsRes.data?.data || paymentsRes.data;
         if (Array.isArray(allPayments)) {
           const studentPayments = allPayments.filter((p: any) => String(p.studentId) === String(studentId));
@@ -134,7 +134,7 @@ export async function fetchWalletInfo(studentId?: string | number): Promise<Wall
 
       // 3. Fetch FeeDues (Taksitler & Aidat Tahakkukları)
       try {
-        const feeRes = await apiClient.get('/api/FeeDues/getall');
+        const feeRes = await apiClient.get(`/api/FeeDues/getall?studentId=${studentId}`);
         const allDues = feeRes.data?.data || feeRes.data;
         if (Array.isArray(allDues)) {
           const studentDues = allDues.filter((d: any) => String(d.studentId) === String(studentId));

@@ -8,6 +8,7 @@ import {
   Platform,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,9 +67,11 @@ export default function LoginScreen() {
       >
         {/* Top Header */}
         <View style={styles.header}>
-          <View style={[styles.iconWrapper, { backgroundColor: palette.primaryLight }]}>
-            <Ionicons name="school" size={42} color={palette.primary} />
-          </View>
+          <Image
+            source={require('@/assets/images/screen.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={[styles.title, { color: palette.text }]}>Kursum</Text>
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
             Veli, Öğretmen & Kurum Bilgi Sistemi
@@ -120,6 +123,15 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Masavtech Attribution Footer */}
+        <View style={styles.attributionFooter}>
+          <Text style={[styles.attributionLine, { color: palette.textSecondary }]}>
+            <Text style={[styles.attributionBrand, { color: palette.primary }]}>MASAVTECH</Text>
+            {' HİZMETİDİR • '}
+            {new Date().getFullYear()}
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -135,12 +147,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  iconWrapper: {
+  logoImage: {
     width: 80,
     height: 80,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 12,
   },
   title: {
@@ -177,5 +186,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  attributionFooter: {
+    marginTop: 24,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  attributionLine: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+  },
+  attributionBrand: {
+    fontWeight: '800',
   },
 });

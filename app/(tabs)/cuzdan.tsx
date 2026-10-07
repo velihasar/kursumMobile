@@ -185,7 +185,7 @@ export default function CuzdanScreen() {
                   activeOpacity={0.8}
                 >
                   <View style={styles.studentCardTop}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.studentInfoLeft}>
                       <View
                         style={[
                           styles.studentAvatarBox,
@@ -200,25 +200,32 @@ export default function CuzdanScreen() {
                           color={isSelected ? palette.primary : palette.textSecondary}
                         />
                       </View>
-                      <View>
-                        <Text style={[styles.studentCardName, { color: palette.text }]}>{st.fullName}</Text>
+                      <View style={styles.studentNameBox}>
+                        <Text
+                          style={[styles.studentCardName, { color: palette.text }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {st.fullName}
+                        </Text>
                         <Text style={[styles.studentCardSub, { color: palette.textSecondary }]}>
                           Kantin: <Text style={{ color: palette.success, fontWeight: '700' }}>₺{pInfo?.balance?.toFixed(2) || '0.00'}</Text>
                         </Text>
                       </View>
                     </View>
 
-                    {isSelected ? (
-                      <View style={[styles.selectedPill, { backgroundColor: palette.primary }]}>
-                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                        <Text style={styles.selectedPillText}>Seçili</Text>
-                      </View>
-                    ) : (
+                    <View style={styles.studentBadgeGroup}>
+                      {isSelected && (
+                        <View style={[styles.selectedPill, { backgroundColor: palette.primaryLight }]}>
+                          <Ionicons name="checkmark-circle" size={13} color={palette.primary} />
+                          <Text style={[styles.selectedPillText, { color: palette.primary }]}>Seçili</Text>
+                        </View>
+                      )}
                       <Badge
                         label={hasDebt ? 'Taksit Var' : 'Ödendi'}
                         variant={hasDebt ? 'accent' : 'success'}
                       />
-                    )}
+                    </View>
                   </View>
 
                   {/* Installment Line inside student card */}
@@ -269,7 +276,7 @@ export default function CuzdanScreen() {
               <View style={styles.simChipInner} />
             </View>
             <Text style={styles.cardHolderText} numberOfLines={1}>
-              {selectedStudent ? `${selectedStudent.fullName.toUpperCase()} • KANTİN BAKİYESİ` : 'KANTİN & HARÇLIK BAKİYESİ'}
+              {selectedStudent ? `${selectedStudent.fullName.toLocaleUpperCase('tr-TR')} • KANTİN BAKİYESİ` : 'KANTİN & HARÇLIK BAKİYESİ'}
             </Text>
           </View>
 
@@ -290,8 +297,12 @@ export default function CuzdanScreen() {
       {/* Fee & Dues Summary Card for Selected Student */}
       <Card style={[styles.duesCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <View style={styles.duesHeader}>
-          <View>
-            <Text style={[styles.duesTitle, { color: palette.text }]}>
+          <View style={styles.duesHeaderLeft}>
+            <Text
+              style={[styles.duesTitle, { color: palette.text }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {selectedStudent ? `${selectedStudent.fullName} • Taksit Durumu` : 'Kurs Taksit Durumu'}
             </Text>
             <Text style={[styles.duesSub, { color: palette.textSecondary }]}>
@@ -301,10 +312,12 @@ export default function CuzdanScreen() {
               </Text>
             </Text>
           </View>
-          <Badge
-            label={(wallet?.totalDebt || 0) > 0 ? 'Taksit Var' : 'Borç Yok'}
-            variant={(wallet?.totalDebt || 0) > 0 ? 'accent' : 'success'}
-          />
+          <View style={styles.duesBadgeWrap}>
+            <Badge
+              label={(wallet?.totalDebt || 0) > 0 ? 'Taksit Var' : 'Borç Yok'}
+              variant={(wallet?.totalDebt || 0) > 0 ? 'accent' : 'success'}
+            />
+          </View>
         </View>
 
         {(wallet?.nextPaymentAmount || 0) > 0 ? (
@@ -593,7 +606,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 10,
+  },
+  studentInfoLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 0,
+  },
+  studentNameBox: {
+    flex: 1,
+    minWidth: 0,
   },
   studentAvatarBox: {
     width: 38,
@@ -601,6 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   studentCardName: {
     fontSize: 15,
@@ -610,16 +636,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 1,
   },
+  studentBadgeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
   selectedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    gap: 3,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   selectedPillText: {
-    color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -724,7 +755,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 10,
     marginBottom: 12,
+  },
+  duesHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  duesBadgeWrap: {
+    flexShrink: 0,
+    paddingTop: 2,
   },
   duesTitle: {
     fontSize: 15,
