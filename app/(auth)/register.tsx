@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -128,10 +129,12 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <View style={[styles.iconWrapper, { backgroundColor: palette.primaryLight }]}>
-            <Ionicons name="key" size={32} color={palette.primary} />
-          </View>
-          <Text style={[styles.title, { color: palette.text }]}>Veli Hesabı Aktivasyonu</Text>
+          <Image
+            source={require('@/assets/images/logo.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.title, { color: palette.text, marginTop: 12 }]}>Veli Hesabı Aktivasyonu</Text>
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
             Kurumunuz tarafından size iletilen Veli Giriş Kodu ile ilk kaydınızı oluşturun.
           </Text>
@@ -239,6 +242,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 16,
+  },
+  brandLogo: {
+    width: 240,
+    height: 75,
   },
   iconWrapper: {
     width: 64,

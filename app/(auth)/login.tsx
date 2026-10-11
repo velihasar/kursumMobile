@@ -68,14 +68,10 @@ export default function LoginScreen() {
         {/* Top Header */}
         <View style={styles.header}>
           <Image
-            source={require('@/assets/images/screen.png')}
-            style={styles.logoImage}
+            source={require('@/assets/images/logo.png')}
+            style={styles.brandLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { color: palette.text }]}>Kursum</Text>
-          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            Veli, Öğretmen & Kurum Bilgi Sistemi
-          </Text>
         </View>
 
         {/* Form Card */}
@@ -147,19 +143,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  logoImage: {
-    width: 80,
-    height: 80,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 4,
+  brandLogo: {
+    width: 260,
+    height: 82,
   },
   card: {
     padding: 20,

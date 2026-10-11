@@ -1,11 +1,14 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useAppTheme } from '@/contexts/theme-context';
 import { AuthProvider } from '@/contexts/auth-context';
 import { CustomAlert } from '@/components/ui/CustomAlert';
 import { TopToastProvider } from '@/components/ui/TopToast';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavigationRoot() {
   const { isDark, palette } = useAppTheme();

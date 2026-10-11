@@ -85,11 +85,10 @@ export default function DashboardScreen() {
         <View style={styles.topHeader}>
           <View style={styles.brandRow}>
             <Image
-              source={require('@/assets/images/screen.png')}
-              style={styles.brandLogoImg}
+              source={require('@/assets/images/logoIn.png')}
+              style={styles.headerLogoIn}
               resizeMode="contain"
             />
-            <Text style={[styles.brandTitle, { color: palette.text }]}>KURSUM</Text>
           </View>
 
           {institution?.name ? (
@@ -636,16 +635,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  brandLogoImg: {
-    width: 32,
+  headerLogoIn: {
     height: 32,
-    borderRadius: 8,
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-    marginLeft: 8,
+    width: 106,
   },
   institutionBadge: {
     flexDirection: 'row',
