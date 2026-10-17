@@ -212,6 +212,24 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Kurum Başvurusu & Demo */}
+        <TouchableOpacity
+          style={[styles.kurumCard, { backgroundColor: palette.card, borderColor: palette.border }]}
+          onPress={() => router.push('/kurum-basvuru' as any)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.kurumIconBox, { backgroundColor: palette.primaryLight }]}>
+            <Ionicons name="business" size={20} color={palette.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.kurumTitle, { color: palette.text }]}>Kurum Girişi mi Arıyorsunuz?</Text>
+            <Text style={[styles.kurumSubtitle, { color: palette.textSecondary }]}>
+              Kurumunuz için demo ve kayıt başvurusu yapın
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={palette.textSecondary} />
+        </TouchableOpacity>
+
         {/* Masavtech Attribution Footer */}
         <View style={styles.attributionFooter}>
           <Text style={[styles.attributionLine, { color: palette.textSecondary }]}>
@@ -284,11 +302,35 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   footer: {
-    marginTop: 24,
+    marginTop: 20,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 14,
+  },
+  kurumCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 18,
+    gap: 12,
+  },
+  kurumIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  kurumTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  kurumSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   attributionFooter: {
     marginTop: 24,

@@ -54,8 +54,8 @@ export default function ProfilScreen() {
   const handleShareApp = async () => {
     try {
       await Share.share({
-        message: 'Kursum Mobil uygulamasını keşfedin! Ders programı, yoklama ve kantin bakiyenizi anlık takip edin. 🎓✨',
-        title: 'Kursum Mobil',
+        message: 'Kursum uygulamasını keşfedin! Ders programı, yoklama ve kantin bakiyenizi anlık takip edin. 🎓✨',
+        title: 'Kursum',
       });
     } catch {
       showAlert('Hata', 'Uygulama paylaşılırken bir hata oluştu.', undefined, 'error');
@@ -120,9 +120,9 @@ export default function ProfilScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: palette.text }]}>Profil & Ayarlar</Text>
+        <Text style={[styles.title, { color: palette.text }]}>Ayarlar</Text>
         <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-          Kullanıcı bilgileri, tercihler ve uygulama ayarları
+          Profil bilgileri, tercihler ve destek
         </Text>
       </View>
 
@@ -152,8 +152,8 @@ export default function ProfilScreen() {
           </View>
         </Card>
 
-        {/* Account & Security Section */}
-        <Text style={[styles.sectionTitle, { color: palette.textSecondary }]}>HESAP & GÜVENLİK</Text>
+        {/* Profile Settings Section */}
+        <Text style={[styles.sectionTitle, { color: palette.textSecondary }]}>PROFİL AYARLARI</Text>
         <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <TouchableOpacity
             style={styles.settingActionRow}
@@ -215,6 +215,25 @@ export default function ProfilScreen() {
         <Card style={[styles.settingsCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <TouchableOpacity
             style={styles.settingActionRow}
+            onPress={() => router.push('/bize-ulasin')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconBox, { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' }]}>
+                <Ionicons name="chatbubbles-outline" size={18} color={palette.primary} />
+              </View>
+              <View>
+                <Text style={[styles.settingLabel, { color: palette.text }]}>Bize Ulaşın</Text>
+                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Şikayet, öneri veya geri bildirim iletin</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+          </TouchableOpacity>
+
+          <View style={[styles.innerDivider, { backgroundColor: palette.borderLight }]} />
+
+          <TouchableOpacity
+            style={styles.settingActionRow}
             onPress={handleShareApp}
             activeOpacity={0.7}
           >
@@ -224,7 +243,7 @@ export default function ProfilScreen() {
               </View>
               <View>
                 <Text style={[styles.settingLabel, { color: palette.text }]}>Uygulamayı Arkadaşınla Paylaş</Text>
-                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Kursum Mobil'i sevdiklerinize önerin</Text>
+                <Text style={[styles.settingSub, { color: palette.textSecondary }]}>Kursum uygulamasını sevdiklerinize önerin</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
